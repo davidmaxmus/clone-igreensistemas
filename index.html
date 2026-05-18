@@ -1,0 +1,2398 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>iGreen Performance — Monitoria de Qualidade</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#fff;--bg2:#f5f5f7;--bg3:#e8e8ed;--bg4:#d1d1d6;
+  --text:#1c1c1e;--text2:#6e6e73;--text3:#aeaeb2;
+  --border:#e0e0e5;--border2:#c8c8d0;
+  --r:8px;--rl:12px;--rxl:16px;
+  --green:#34C759;--gm:#2AA147;--gpale:#d1f2d9;--gdim:#eaf9ee;
+  --red:#FF3B30;--amber:#FF9500;--blue:#007AFF;--purple:#AF52DE;
+  --dark:#1c1c1e;--dark2:#2c2c2e;--dark3:#3a3a3c;
+  --ig-green:#00cc44;--ig-dark:#00993a;--ig-pale:#e6fff0;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg2);color:var(--text);min-height:100vh;}
+
+/* LOGIN */
+.login-screen{position:fixed;inset:0;background:linear-gradient(160deg,#0a1a0e 0%,#0f2b18 40%,#1a3320 70%,#0d1f12 100%);display:flex;align-items:center;justify-content:center;z-index:2000;flex-direction:column;}
+.login-box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:var(--rxl);padding:2.5rem 2rem;width:340px;backdrop-filter:blur(20px);}
+.login-box h2{font-size:20px;font-weight:700;color:#fff;margin-bottom:.4rem;}
+.login-box p{font-size:13px;color:rgba(255,255,255,.45);margin-bottom:2rem;}
+.login-field{margin-bottom:14px;}
+.login-field label{display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
+.login-field input{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:var(--r);padding:10px 12px;font-size:14px;color:#fff;outline:none;transition:border-color .15s;}
+.login-field input::placeholder{color:rgba(255,255,255,.3);}
+.login-field input:focus{border-color:var(--green);}
+.login-btn{width:100%;background:var(--ig-green);color:#fff;border:none;border-radius:var(--r);padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;transition:opacity .15s;}
+.login-btn:hover{opacity:.88;}
+.login-error{font-size:12px;color:#ff6b6b;margin-top:8px;text-align:center;min-height:16px;}
+.forgot-link{display:block;text-align:right;font-size:11px;color:rgba(255,255,255,.35);margin-top:-6px;margin-bottom:12px;cursor:pointer;transition:color .15s;}
+.forgot-link:hover{color:#00cc44;}
+
+/* AUTH SCREENS */
+.auth-screen{position:fixed;inset:0;background:linear-gradient(160deg,#0a1a0e 0%,#0f2b18 40%,#1a3320 70%,#0d1f12 100%);display:none;align-items:center;justify-content:center;z-index:2001;flex-direction:column;}
+.auth-screen.active{display:flex;}
+.auth-box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:var(--rxl);padding:2.5rem 2rem;width:340px;backdrop-filter:blur(20px);}
+.auth-box-brand-name{font-size:22px;font-weight:800;color:#fff;text-align:center;margin-bottom:4px;}
+.auth-box-brand-tag{font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.06em;text-transform:uppercase;text-align:center;}
+.auth-box-brand-line{margin:12px auto 20px;width:40px;height:2px;background:#00cc44;border-radius:2px;}
+.auth-title{font-size:16px;font-weight:700;color:#fff;margin-bottom:.35rem;}
+.auth-sub{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:1.5rem;line-height:1.5;}
+.auth-field{margin-bottom:14px;}
+.auth-field label{display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;}
+.auth-field input{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:var(--r);padding:11px 13px;font-size:14px;color:#fff;outline:none;transition:border-color .15s;}
+.auth-field input::placeholder{color:rgba(255,255,255,.3);}
+.auth-field input:focus{border-color:#00cc44;}
+.auth-field .field-err{font-size:11px;color:#ff6b6b;margin-top:4px;min-height:14px;}
+.auth-btn{width:100%;background:#00cc44;color:#fff;border:none;border-radius:var(--r);padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;transition:opacity .15s;}
+.auth-btn:hover{opacity:.88;}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed;}
+.auth-msg{font-size:12px;margin-top:10px;text-align:center;min-height:18px;line-height:1.5;padding:10px 12px;border-radius:var(--r);display:none;}
+.auth-msg.success{background:rgba(0,204,68,.1);color:#00cc44;border:1px solid rgba(0,204,68,.25);display:block;}
+.auth-msg.error{background:rgba(255,82,82,.1);color:#ff6b6b;border:1px solid rgba(255,82,82,.25);display:block;}
+.auth-back{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.4);cursor:pointer;margin-top:1.25rem;transition:color .15s;background:none;border:none;padding:0;font-family:inherit;}
+.auth-back:hover{color:#00cc44;}
+.auth-pass-strength{height:3px;border-radius:2px;margin-top:6px;background:rgba(255,255,255,.1);overflow:hidden;}
+.auth-pass-strength-bar{height:100%;border-radius:2px;transition:width .3s,background .3s;}
+.auth-pass-hint{font-size:10px;color:rgba(255,255,255,.3);margin-top:4px;}
+
+/* USER TAG */
+.user-tag{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:var(--r);padding:6px 11px;font-size:12px;color:var(--text);transition:border-color .15s;}
+.user-tag.pending{border-color:rgba(255,179,0,.35);background:rgba(255,179,0,.06);}
+.user-tag.active{border-color:rgba(0,204,68,.3);background:rgba(0,204,68,.05);}
+.user-tag-name{display:flex;align-items:center;gap:6px;font-weight:600;}
+.user-tag-email{font-size:10px;color:var(--text2);}
+.user-tag-status{font-size:9px;font-weight:700;padding:1px 7px;border-radius:10px;}
+.uts-pending{background:rgba(255,179,0,.15);color:var(--amber);}
+.uts-active{background:rgba(0,204,68,.12);color:var(--ig-green);}
+.user-tag-actions{display:flex;gap:5px;margin-top:3px;}
+.uta-btn{font-size:10px;cursor:pointer;border:none;background:none;padding:0;transition:color .1s;font-family:inherit;}
+.uta-btn.resend{color:var(--ig-green);}.uta-btn.resend:hover{text-decoration:underline;}
+.uta-btn.remove{color:var(--text3);}.uta-btn.remove:hover{color:var(--red);}
+
+/* INVITE TOAST */
+.invite-toast{position:fixed;bottom:1.5rem;right:1.5rem;background:#1a3320;border:1px solid rgba(0,204,68,.35);border-radius:var(--rl);padding:.9rem 1.25rem;font-size:13px;color:#fff;box-shadow:0 8px 32px rgba(0,0,0,.4);z-index:3000;display:flex;align-items:center;gap:10px;max-width:340px;transform:translateY(20px);opacity:0;transition:all .3s;pointer-events:none;}
+.invite-toast.show{transform:translateY(0);opacity:1;}
+.invite-toast-icon{font-size:20px;flex-shrink:0;}
+.invite-toast-text{flex:1;line-height:1.4;}
+.invite-toast-text strong{color:var(--ig-green);}
+
+/* HEADER */
+.app-header{background:var(--dark);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:200;gap:10px;}
+.app-brand{display:flex;align-items:center;gap:10px;}
+.app-brand-sep{width:1px;height:18px;background:rgba(255,255,255,.15);}
+.app-brand-name{font-size:14px;font-weight:700;color:#fff;}
+.header-ctx{font-size:12px;color:rgba(255,255,255,.5);}
+.header-right{display:flex;align-items:center;gap:8px;}
+.month-sel{background:rgba(0,204,68,.15);border:1px solid rgba(0,204,68,.35);color:#fff;border-radius:20px;padding:4px 11px;font-size:12px;cursor:pointer;outline:none;}
+.month-sel option{background:#2c2c2e;}
+.filter-sel{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);border-radius:20px;padding:4px 10px;font-size:12px;cursor:pointer;outline:none;max-width:150px;}
+.filter-sel option{background:#2c2c2e;}
+.user-chip{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:4px 12px 4px 6px;cursor:pointer;transition:background .1s;}
+.user-chip:hover{background:rgba(255,255,255,.14);}
+.user-chip-avatar{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;}
+.user-chip-name{font-size:12px;color:#fff;font-weight:500;}
+.user-chip-role{font-size:10px;padding:1px 7px;border-radius:10px;font-weight:700;}
+.role-admin{background:rgba(255,149,0,.2);color:#FF9500;}
+.role-gestor{background:rgba(0,122,255,.2);color:#007AFF;}
+.role-op{background:rgba(52,199,89,.2);color:#34C759;}
+.role-senior{background:rgba(175,82,222,.2);color:#AF52DE;}
+.btn-green{background:var(--ig-green);color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:12px;cursor:pointer;font-weight:700;transition:opacity .15s;white-space:nowrap;}
+.btn-green:hover{opacity:.85;}
+
+/* LAYOUT */
+.app-body{display:flex;min-height:calc(100vh - 52px);}
+.sidebar{width:190px;background:var(--bg);border-right:1px solid var(--border);padding:.75rem 0;flex-shrink:0;position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;display:flex;flex-direction:column;}
+.sidebar-section{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:10px 1rem 4px;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 1rem;font-size:13px;color:var(--text2);cursor:pointer;border-left:3px solid transparent;transition:all .1s;user-select:none;}
+.nav-item:hover{background:var(--bg2);color:var(--text);}
+.nav-item.active{color:var(--ig-dark);background:var(--ig-pale);border-left-color:var(--ig-green);font-weight:600;}
+.nav-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0;}
+.sidebar-spacer{flex:1;}
+.sidebar-bottom{padding:.75rem 1rem;border-top:1px solid var(--border);}
+.logout-btn{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text3);cursor:pointer;padding:6px 0;transition:color .1s;}
+.logout-btn:hover{color:var(--red);}
+.main{flex:1;padding:1.5rem;overflow-x:hidden;}
+
+/* VIEWS */
+.view{display:none;animation:fadeIn .15s ease;}.view.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:1.5rem;}
+.page-title{font-size:20px;font-weight:700;color:var(--text);letter-spacing:-.02em;}
+.page-sub{font-size:12px;color:var(--text2);margin-top:3px;}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.25rem;}
+.kpi-grid-5{grid-template-columns:repeat(5,minmax(0,1fr));}
+.kpi{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:1rem 1.1rem;position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--kpi-color,var(--border));}
+.kpi-label{font-size:10px;color:var(--text2);margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+.kpi-val{font-size:28px;font-weight:800;color:var(--text);line-height:1;letter-spacing:-.03em;}
+.kpi-sub{font-size:11px;margin-top:5px;color:var(--text2);}
+.c-green{color:var(--green);}.c-red{color:var(--red);}.c-amber{color:var(--amber);}
+
+/* CARDS */
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;}
+.card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.card-title{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.1rem;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+
+/* BADGES */
+.badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;display:inline-block;white-space:nowrap;}
+.bg-green{background:#d1f2d9;color:#1a6330;}.bg-blue{background:#E3F0FF;color:#0040A0;}
+.bg-amber{background:#fef3d0;color:#7a4800;}.bg-red{background:#fee5e5;color:#7a1515;}
+.bg-dark{background:#2c2c2e;color:#fff;}.bg-purple{background:#f3e5ff;color:#6b21a8;}
+
+/* TABLES */
+.tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.tbl th{font-size:10px;font-weight:700;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg2);text-transform:uppercase;letter-spacing:.03em;}
+.tbl td{padding:10px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
+.tbl tbody tr:last-child td{border-bottom:none;}
+.tbl tr.clickable{cursor:pointer;transition:background .1s;}
+.tbl tr.clickable:hover td{background:var(--gdim);}
+.tbl tr.selected td{background:#fffbe6;}
+.tw{overflow-x:auto;}
+.sb{width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;background:var(--bg);color:var(--text);margin-bottom:12px;outline:none;}
+.sb:focus{border-color:var(--green);}
+.del-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:4px;}
+.del-btn:hover{color:var(--red);background:#fee5e5;}
+
+/* SCORE BAR */
+.sbar-w{width:70px;height:5px;background:var(--border);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;}
+.sbar{height:100%;border-radius:3px;}
+
+/* AVATARS */
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;}
+
+/* COLLAB CARDS */
+.cg{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+.cc{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:.9rem;cursor:pointer;transition:all .15s;}
+.cc:hover{border-color:var(--green);box-shadow:0 2px 16px rgba(52,199,89,.12);transform:translateY(-1px);}
+.back-btn{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;border:1px solid var(--border);background:var(--bg);border-radius:20px;padding:5px 13px;margin-bottom:1rem;transition:all .1s;}
+.back-btn:hover{color:var(--text);border-color:var(--border2);}
+
+/* OP DETAIL */
+.op-hero{background:linear-gradient(135deg,#1c1c1e,#2c2c2e);border-radius:var(--rl);padding:1.5rem;margin-bottom:1.1rem;display:flex;align-items:center;gap:1.25rem;}
+.month-cmp{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-bottom:1.1rem;}
+.mc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:.85rem 1rem;position:relative;}
+.mc.curr{border-color:var(--green);background:var(--gdim);}
+.mc-tag{position:absolute;top:6px;right:8px;font-size:9px;background:var(--green);color:#fff;padding:1px 6px;border-radius:10px;font-weight:700;}
+
+/* FORMS */
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
+.field label{font-size:10px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+.field input,.field select,.field textarea{font-size:13px;padding:8px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg);color:var(--text);width:100%;outline:none;transition:border-color .15s;}
+.field input:focus,.field select:focus{border-color:var(--green);}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.sep{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin:1rem 0 .6rem;display:flex;align-items:center;gap:8px;}
+.sep::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* CHECKLIST */
+.chk-item{display:flex;align-items:flex-start;gap:10px;padding:9px 11px;border-radius:var(--r);border:1px solid var(--border);margin-bottom:5px;cursor:pointer;transition:background .1s;}
+.chk-item:hover{background:var(--bg2);}
+.chk-item.crit{border-color:#ffccca;}.chk-item.crit:hover{background:#fff5f5;}
+.chk-item input[type=checkbox]{margin-top:2px;flex-shrink:0;accent-color:var(--red);width:14px;height:14px;cursor:pointer;}
+.chk-text{flex:1;font-size:12px;line-height:1.45;}
+.chk-pts{font-size:11px;font-weight:700;color:var(--red);flex-shrink:0;}
+
+/* SCORE PREVIEW */
+.score-prev{background:linear-gradient(135deg,#1c1c1e,#2c2c2e);border-radius:var(--rl);padding:1rem 1.25rem;margin:1rem 0;display:flex;align-items:center;justify-content:space-between;}
+.score-prev-val{font-size:36px;font-weight:800;letter-spacing:-.03em;}
+.crit-warn{font-size:11px;color:#ff6b6b;margin-top:3px;display:none;}
+
+/* MODAL */
+.mb{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:999;padding:1rem;backdrop-filter:blur(4px);}
+.mo{background:var(--bg);border-radius:var(--rl);border:1px solid var(--border);width:100%;max-width:580px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2);}
+.mo-hd{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.25rem .75rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:1;}
+.mo-hd h3{font-size:15px;font-weight:700;}
+.mo-cl{background:var(--bg2);border:none;font-size:14px;cursor:pointer;color:var(--text2);width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.mo-cl:hover{background:var(--bg3);}
+.mo-body{padding:1.1rem 1.25rem;}
+.mo-ft{padding:.75rem 1.25rem 1.1rem;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--bg);}
+
+/* BUTTONS */
+.btn{border-radius:var(--r);padding:8px 18px;font-size:13px;cursor:pointer;font-weight:500;border:none;transition:all .15s;}
+.btn-dark{background:#00993a;color:#fff;}.btn-dark:hover{opacity:.88;}
+.btn-sec{background:transparent;color:var(--text);border:1px solid var(--border2);}.btn-sec:hover{background:var(--bg2);}
+.btn-danger{background:var(--red);color:#fff;}.btn-danger:hover{opacity:.85;}
+.btn-sm{padding:5px 12px;font-size:12px;}
+
+/* SETTINGS */
+.tag{display:inline-flex;align-items:center;gap:5px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px;}
+.tag-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:0;line-height:1;}
+.tag-del:hover{color:var(--red);}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.add-row{display:flex;gap:6px;}
+.add-row input{flex:1;font-size:12px;padding:6px 10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;}
+.add-row input:focus{border-color:var(--green);}
+.add-row button{background:var(--green);color:#fff;border:none;border-radius:var(--r);padding:6px 13px;font-size:12px;cursor:pointer;white-space:nowrap;font-weight:700;}
+.sc-row{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:5px;background:var(--bg);}
+.sc-row input[type=text]{flex:1;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);outline:none;min-width:0;}
+.sc-row input[type=text]:focus{border-color:var(--green);}
+.sc-row input[type=number]{width:56px;font-size:13px;font-weight:700;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);text-align:center;outline:none;flex-shrink:0;}
+.sc-row input[type=number]:focus{border-color:var(--green);}
+.mgr-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:8px;}
+
+/* TEAM CARD */
+.team-cfg-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:1rem;margin-bottom:10px;}
+.team-cfg-card:hover{border-color:var(--border2);}
+
+/* PIN MODAL */
+.pin-screen{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:1500;backdrop-filter:blur(6px);}
+.pin-box{background:var(--bg);border-radius:var(--rl);padding:2rem;text-align:center;width:300px;box-shadow:0 32px 80px rgba(0,0,0,.25);}
+.pin-dots{display:flex;gap:10px;justify-content:center;margin-bottom:1.25rem;}
+.pin-dot{width:14px;height:14px;border-radius:50%;background:var(--border2);}
+.pin-dot.f{background:var(--dark);}
+.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.pk{height:46px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg);font-size:17px;font-weight:700;cursor:pointer;transition:all .1s;}
+.pk:hover{background:var(--bg2);}
+.pk:active{transform:scale(.95);}
+
+/* DIST GRID */
+.dist-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;}
+.dist-c{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:.8rem;text-align:center;}
+
+/* TEAM RANKING */
+.team-rank-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.team-rank-item:last-child{border-bottom:none;}
+.trk-rank{font-size:16px;font-weight:800;width:28px;text-align:center;flex-shrink:0;}
+
+/* LOSS CARD */
+.loss-item{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:rgba(255,59,48,.06);border:1px solid rgba(255,59,48,.12);border-radius:var(--r);margin-bottom:6px;}
+.loss-item-label{font-size:12px;color:var(--text);flex:1;}
+.loss-item-pts{font-size:14px;font-weight:800;color:var(--red);}
+
+/* BATCH ACTIONS BAR */
+.batch-bar{display:flex;align-items:center;gap:10px;background:#1c1c1e;border-radius:var(--r);padding:9px 14px;margin-bottom:10px;flex-wrap:wrap;}
+.batch-bar span{font-size:12px;color:#fff;}
+.batch-bar button{font-size:12px;border:none;border-radius:var(--r);padding:5px 12px;cursor:pointer;font-weight:700;}
+.batch-bar .btn-del{background:var(--red);color:#fff;}
+.batch-bar .btn-pdf{background:var(--ig-green);color:#fff;}
+.batch-bar .btn-clear{background:rgba(255,255,255,.12);color:#fff;}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .sidebar{display:none;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .kpi-grid-5{grid-template-columns:repeat(3,1fr);}
+  .g2,.g3{grid-template-columns:1fr;}
+  .dist-grid{grid-template-columns:repeat(3,1fr);}
+}
+@media(max-width:600px){
+  .main{padding:1rem;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .fr3{grid-template-columns:1fr;}
+  .fr2{grid-template-columns:1fr;}
+}
+@media print{
+  .app-header,.sidebar,.no-print{display:none!important;}
+  .app-body{display:block;}
+  .main{padding:0;}
+  .view{display:none!important;}
+  .view.print-target{display:block!important;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div id="login-loading" style="text-align:center;color:rgba(255,255,255,.5);font-size:13px;padding:2rem 0;display:none">Verificando sessão...</div>
+    <div id="login-form-wrap">
+      <div style="text-align:center;margin-bottom:1.75rem">
+        <div style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-.02em;margin-bottom:4px">iGreen Performance</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.4);letter-spacing:.04em">PAINEL DE MONITORIA DE QUALIDADE</div>
+        <div style="margin-top:12px;width:40px;height:2px;background:#00cc44;margin-left:auto;margin-right:auto;border-radius:2px"></div>
+      </div>
+      <div class="login-field">
+        <label>E-mail</label>
+        <input type="email" id="login-email" placeholder="seu@email.com.br" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="login-field">
+        <label>Senha</label>
+        <input type="password" id="login-pass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <span class="forgot-link" onclick="showScreen('recuperar-senha')">Esqueci minha senha</span>
+      <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar</button>
+      <div class="login-error" id="login-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- RECUPERAR SENHA -->
+<div class="auth-screen" id="screen-recuperar-senha">
+  <div class="auth-box">
+    <div class="auth-box-brand-name">iGreen Performance</div>
+    <div class="auth-box-brand-tag">Monitoria de Qualidade</div>
+    <div class="auth-box-brand-line"></div>
+    <div class="auth-title">Recuperação de senha</div>
+    <div class="auth-sub">Informe seu e-mail corporativo e enviaremos um link para redefinir sua senha.</div>
+    <div class="auth-field">
+      <label>E-mail corporativo</label>
+      <input type="email" id="reset-email" placeholder="seu@email.com.br" onkeydown="if(event.key==='Enter')requestPasswordReset()">
+      <div class="field-err" id="reset-email-err"></div>
+    </div>
+    <button class="auth-btn" id="reset-btn" onclick="requestPasswordReset()">Enviar link de recuperação</button>
+    <div class="auth-msg" id="reset-msg"></div>
+    <div style="text-align:center">
+      <button class="auth-back" onclick="showScreen('login')">← Voltar ao login</button>
+    </div>
+  </div>
+</div>
+
+<!-- CRIAR SENHA -->
+<div class="auth-screen" id="screen-criar-senha">
+  <div class="auth-box">
+    <div class="auth-box-brand-name">iGreen Performance</div>
+    <div class="auth-box-brand-tag">Monitoria de Qualidade</div>
+    <div class="auth-box-brand-line"></div>
+    <div class="auth-title">Criar nova senha</div>
+    <div class="auth-sub">Defina uma senha forte. Mínimo de 6 caracteres.</div>
+    <div class="auth-field">
+      <label>Nova senha</label>
+      <input type="password" id="new-pass" placeholder="Mínimo 6 caracteres" oninput="onPassInput()" onkeydown="if(event.key==='Enter')createPassword()">
+      <div class="auth-pass-strength"><div class="auth-pass-strength-bar" id="pass-strength-bar" style="width:0%"></div></div>
+      <div class="auth-pass-hint" id="pass-strength-hint"></div>
+      <div class="field-err" id="new-pass-err"></div>
+    </div>
+    <div class="auth-field">
+      <label>Confirmar nova senha</label>
+      <input type="password" id="confirm-pass" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')createPassword()">
+      <div class="field-err" id="confirm-pass-err"></div>
+    </div>
+    <button class="auth-btn" id="create-btn" onclick="createPassword()">Criar senha</button>
+    <div class="auth-msg" id="create-msg"></div>
+    <div style="text-align:center">
+      <button class="auth-back" onclick="showScreen('login')">← Voltar ao login</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none">
+  <header class="app-header">
+    <div class="app-brand">
+      <div class="app-brand-sep"></div>
+      <span class="app-brand-name">iGreen Performance</span>
+      <div class="app-brand-sep"></div>
+      <span class="header-ctx" id="header-ctx">Monitoria de Qualidade</span>
+    </div>
+    <div class="header-right">
+      <select class="month-sel" id="global-month" onchange="onMonthChange()"></select>
+      <div id="filter-team-wrap" style="display:none;position:relative">
+        <button id="filter-team-btn" onclick="toggleTeamDropdown()" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.8);border-radius:20px;padding:4px 12px;font-size:12px;cursor:pointer;outline:none;display:flex;align-items:center;gap:6px;white-space:nowrap">
+          <span id="filter-team-label">Todas as equipes</span> ▾
+        </button>
+        <div id="filter-team-dropdown" style="display:none;position:absolute;top:110%;right:0;background:#2c2c2e;border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:8px 0;min-width:200px;z-index:500;box-shadow:0 8px 32px rgba(0,0,0,.4)">
+          <div id="filter-team-options"></div>
+        </div>
+      </div>
+      <div class="user-chip" onclick="">
+        <div class="av user-chip-avatar" id="hdr-avatar" style="width:24px;height:24px;font-size:10px"></div>
+        <span class="user-chip-name" id="hdr-name"></span>
+        <span class="user-chip-role" id="hdr-role"></span>
+      </div>
+      <button class="btn-green" id="btn-new-mon" onclick="openModal()" style="display:none">+ Monitoria</button>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <nav class="sidebar">
+      <div style="padding:.5rem 1rem .75rem;border-bottom:1px solid var(--border);margin-bottom:.5rem">
+        <div style="font-size:11px;color:var(--text2)" id="sb-user-info"></div>
+      </div>
+      <div id="nav-admin" style="display:none">
+        <div class="sidebar-section">Empresa</div>
+        <div class="nav-item active" data-v="admin-overview" onclick="nav(this)"><span class="nav-icon">📊</span>Visão Geral</div>
+        <div class="nav-item" data-v="admin-teams" onclick="nav(this)"><span class="nav-icon">🏢</span>Equipes</div>
+        <div class="nav-item" data-v="admin-ranking" onclick="nav(this)"><span class="nav-icon">🏆</span>Ranking</div>
+        <div class="sidebar-section">Dados</div>
+        <div class="nav-item" data-v="records" onclick="nav(this)"><span class="nav-icon">📋</span>Registros</div>
+        <div class="sidebar-section">Sistema</div>
+        <div class="nav-item" data-v="admin-settings" onclick="nav(this)"><span class="nav-icon">⚙</span>Configurações</div>
+      </div>
+      <div id="nav-gestor" style="display:none">
+        <div class="sidebar-section">Minha Equipe</div>
+        <div class="nav-item active" data-v="gestor-overview" onclick="nav(this)"><span class="nav-icon">📊</span>Painel da Equipe</div>
+        <div class="nav-item" data-v="gestor-operators" onclick="nav(this)"><span class="nav-icon">👥</span>Operadores</div>
+        <div class="nav-item" data-v="gestor-compare" onclick="nav(this)"><span class="nav-icon">📈</span>Comparativo</div>
+        <div class="sidebar-section">Dados</div>
+        <div class="nav-item" data-v="records" onclick="nav(this)"><span class="nav-icon">📋</span>Registros</div>
+        <div class="sidebar-section">Configurações</div>
+        <div class="nav-item" data-v="gestor-settings" onclick="nav(this)"><span class="nav-icon">🎯</span>Metas da Equipe</div>
+        <div class="nav-item" data-v="gestor-team-users" onclick="nav(this)"><span class="nav-icon">👥</span>Gerenciar Equipe</div>
+      </div>
+      <div id="nav-senior" style="display:none">
+        <div class="sidebar-section">Visão Geral</div>
+        <div class="nav-item active" data-v="senior-overview" onclick="nav(this)"><span class="nav-icon">📊</span>Painel Sênior</div>
+        <div class="nav-item" data-v="senior-teams" onclick="nav(this)"><span class="nav-icon">🏢</span>Equipes</div>
+        <div class="nav-item" data-v="senior-ranking" onclick="nav(this)"><span class="nav-icon">🏆</span>Ranking</div>
+        <div class="sidebar-section">Dados</div>
+        <div class="nav-item" data-v="records" onclick="nav(this)"><span class="nav-icon">📋</span>Registros</div>
+      </div>
+      <div id="nav-op" style="display:none">
+        <div class="sidebar-section">Meu Desempenho</div>
+        <div class="nav-item active" data-v="op-dashboard" onclick="nav(this)"><span class="nav-icon">📊</span>Meu Dashboard</div>
+        <div class="nav-item" data-v="op-history" onclick="nav(this)"><span class="nav-icon">📋</span>Histórico</div>
+        <div class="nav-item" data-v="op-evolution" onclick="nav(this)"><span class="nav-icon">📈</span>Evolução</div>
+      </div>
+      <div class="sidebar-spacer"></div>
+      <div class="sidebar-bottom">
+        <div class="logout-btn" onclick="doLogout()">↩ Sair</div>
+      </div>
+    </nav>
+
+    <main class="main">
+
+      <!-- ADMIN: VISÃO GERAL -->
+      <div class="view" id="view-admin-overview">
+        <div class="page-header">
+          <div><div class="page-title">Visão Geral da Empresa</div><div class="page-sub" id="ov-sub"></div></div>
+        </div>
+        <div class="kpi-grid kpi-grid-5">
+          <div class="kpi" style="--kpi-color:var(--blue)"><div class="kpi-label">Monitorias</div><div class="kpi-val" id="ov-total">—</div><div class="kpi-sub" id="ov-total-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--green)"><div class="kpi-label">Pontuação Média</div><div class="kpi-val" id="ov-avg">—</div><div class="kpi-sub" id="ov-avg-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--red)"><div class="kpi-label">Total Pts Perdidos</div><div class="kpi-val c-red" id="ov-totloss">—</div><div class="kpi-sub" id="ov-totloss-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--amber)"><div class="kpi-label">Média de Qualidade</div><div class="kpi-val" id="ov-csat">—</div><div class="kpi-sub" id="ov-csat-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--purple)"><div class="kpi-label">Equipes Ativas</div><div class="kpi-val" id="ov-teams">—</div><div class="kpi-sub" id="ov-teams-s"></div></div>
+        </div>
+        <div class="g2">
+          <div class="card"><div class="card-hd"><span class="card-title">Pontuação Média por Equipe</span></div><div style="position:relative;height:210px"><canvas id="chart-ov-teams"></canvas></div></div>
+          <div class="card"><div class="card-hd"><span class="card-title">Evolução Mensal — Empresa</span></div><div style="position:relative;height:210px"><canvas id="chart-ov-trend"></canvas></div></div>
+        </div>
+        <div class="g2">
+          <div class="card"><div class="card-title" style="margin-bottom:1rem">Distribuição de Resultados</div><div class="dist-grid" id="ov-dist"></div></div>
+          <div class="card"><div class="card-title" style="margin-bottom:1rem">Top 5 Operadores do Mês</div><div id="ov-top5"></div></div>
+        </div>
+      </div>
+
+      <!-- ADMIN: EQUIPES -->
+      <div class="view" id="view-admin-teams">
+        <div class="page-header">
+          <div><div class="page-title">Ranking de Equipes</div><div class="page-sub">Comparativo de desempenho entre equipes no mês</div></div>
+        </div>
+        <div id="teams-grid" class="g2"></div>
+      </div>
+
+      <!-- ADMIN: RANKING -->
+      <div class="view" id="view-admin-ranking">
+        <div class="page-header"><div><div class="page-title">Ranking de Operadores</div><div class="page-sub">Todos os operadores da empresa</div></div></div>
+        <div class="card">
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <input class="sb" id="rank-search" placeholder="🔍 Buscar operador..." oninput="renderAdminRanking()" style="margin:0;flex:1;min-width:180px">
+            <select id="rank-filter-team" class="sb" style="margin:0;width:auto" onchange="renderAdminRanking()">
+              <option value="">Todas as equipes</option>
+            </select>
+          </div>
+          <div class="tw"><table class="tbl">
+            <thead><tr><th>#</th><th>Operador</th><th>Equipe</th><th>Gestor</th><th style="text-align:center">Mon.</th><th style="text-align:center">Pontuação</th><th>Barra</th><th style="text-align:center">Perda/Mon.</th><th style="text-align:center">Total Perdido</th><th style="text-align:center">% Perda</th><th style="text-align:center">Zeradas</th><th style="text-align:center">vs Mês Ant.</th><th style="text-align:center">Qualidade</th><th style="text-align:center">Status</th></tr></thead>
+            <tbody id="rank-tbody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- GESTOR: PAINEL -->
+      <div class="view" id="view-gestor-overview">
+        <div class="page-header">
+          <div><div class="page-title" id="gestor-panel-title">Painel da Equipe</div><div class="page-sub" id="gestor-panel-sub"></div></div>
+        </div>
+        <div class="kpi-grid kpi-grid-5">
+          <div class="kpi" style="--kpi-color:var(--blue)"><div class="kpi-label">Monitorias</div><div class="kpi-val" id="gv-total">—</div><div class="kpi-sub" id="gv-total-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--green)"><div class="kpi-label">Pontuação Média</div><div class="kpi-val" id="gv-avg">—</div><div class="kpi-sub" id="gv-avg-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--red)"><div class="kpi-label">Total Pts Perdidos</div><div class="kpi-val c-red" id="gv-totloss">—</div><div class="kpi-sub" id="gv-totloss-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--amber)"><div class="kpi-label">Média de Qualidade</div><div class="kpi-val" id="gv-csat">—</div><div class="kpi-sub" id="gv-csat-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--purple)"><div class="kpi-label">Zeradas</div><div class="kpi-val c-red" id="gv-zeros">—</div><div class="kpi-sub" id="gv-zeros-s"></div></div>
+        </div>
+        <div class="g2">
+          <div class="card">
+            <div class="card-hd"><span class="card-title">Ranking por Menor Perda</span><span style="font-size:11px;color:var(--text2)">menor perda = melhor</span></div>
+            <div id="gestor-team-rank"></div>
+          </div>
+          <div class="card"><div class="card-title" style="margin-bottom:.9rem">Evolução Mensal — Perda Média</div><div style="position:relative;height:220px"><canvas id="chart-gv-trend"></canvas></div></div>
+        </div>
+        <div class="g2">
+          <div class="card"><div class="card-title" style="margin-bottom:.9rem">Distribuição de Resultados</div><div class="dist-grid" id="gv-dist"></div></div>
+          <div class="card"><div class="card-title" style="margin-bottom:.9rem">Pontos Perdidos por Operador</div><div id="gestor-loss-by-op"></div></div>
+        </div>
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-title" style="margin-bottom:.9rem">Meta da Equipe vs Realizado</div>
+          <div id="gestor-goal-display"></div>
+        </div>
+      </div>
+
+      <!-- GESTOR: OPERADORES -->
+      <div class="view" id="view-gestor-operators">
+        <div id="gop-list">
+          <div class="page-header"><div><div class="page-title">Operadores da Equipe</div><div class="page-sub">Clique para ver detalhe individual</div></div></div>
+          <input class="sb" id="gop-search" placeholder="🔍 Buscar operador..." oninput="renderGestorOperators()">
+          <div class="cg" id="gop-grid"></div>
+        </div>
+        <div id="gop-detail" style="display:none">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem" class="no-print">
+            <button class="back-btn" onclick="closeOpDetail()" style="margin-bottom:0">← Voltar à equipe</button>
+            <button onclick="exportPDF('gop-detail-content',_currentDetailName)" class="btn-green" style="font-size:12px;padding:5px 14px">⬇ Exportar PDF</button>
+          </div>
+          <div id="gop-detail-content"></div>
+        </div>
+      </div>
+
+      <!-- GESTOR: COMPARATIVO -->
+      <div class="view" id="view-gestor-compare">
+        <div class="page-header"><div><div class="page-title">Comparativo de Operadores</div></div></div>
+        <div class="card" style="margin-bottom:12px"><div style="position:relative;height:280px"><canvas id="chart-compare"></canvas></div></div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title" style="margin-bottom:.9rem">🧠 Perfil dos Colaboradores</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+            <span style="font-size:12px;color:var(--text2)">Filtrar por perfil:</span>
+            <select id="compare-perfil-filter" style="font-size:12px;padding:5px 10px;border:1px solid var(--border2);border-radius:20px;background:var(--bg);color:var(--text);outline:none" onchange="renderPerfilTable()">
+              <option value="">Todos os perfis</option>
+              <option value="analitico">🧠 Analítico</option>
+              <option value="comunicador">🗣️ Comunicador</option>
+              <option value="executor">🚀 Executor</option>
+              <option value="negociador">🤝 Negociador</option>
+              <option value="operacional">⚙️ Operacional</option>
+              <option value="em_desenvolvimento">📈 Em desenvolvimento</option>
+            </select>
+            <select id="compare-nivel-filter" style="font-size:12px;padding:5px 10px;border:1px solid var(--border2);border-radius:20px;background:var(--bg);color:var(--text);outline:none" onchange="renderPerfilTable()">
+              <option value="">Todos os níveis</option>
+              <option value="alto">⭐ Alto</option>
+              <option value="medio">🔘 Médio</option>
+              <option value="em_desenvolvimento">📈 Em desenvolvimento</option>
+            </select>
+          </div>
+          <div id="compare-perfil-table"></div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:.9rem">Tabela Comparativa</div>
+          <div class="tw"><table class="tbl" id="compare-table"><thead><tr id="compare-thead"></tr></thead><tbody id="compare-tbody"></tbody></table></div>
+        </div>
+      </div>
+
+      <!-- GESTOR: METAS -->
+      <div class="view" id="view-gestor-settings">
+        <div class="page-header"><div><div class="page-title">Metas da Equipe</div></div></div>
+        <div class="card" style="max-width:480px">
+          <div class="card-title" style="margin-bottom:1rem">Meta mínima de pontuação</div>
+          <div class="field"><label>Pontuação mínima por monitoria</label><input type="number" id="team-goal-input" min="0" max="60" placeholder="ex: 50"></div>
+          <div class="field"><label>Meta de Média de Qualidade (%)</label><input type="number" id="team-csat-goal" min="0" max="100" placeholder="ex: 85"></div>
+          <div class="field"><label>Monitorias por operador / mês</label><input type="number" id="team-mon-goal" min="0" placeholder="ex: 8"></div>
+          <div class="field"><label>Pontuação máxima mensal por operador (auto)</label><input type="text" id="team-monthly-max" readonly style="background:var(--bg2);color:var(--text2)"></div>
+          <button class="btn btn-dark" onclick="saveTeamGoals()" style="margin-top:8px">Salvar Metas</button>
+          <div id="team-goal-saved" style="font-size:12px;color:var(--green);margin-top:8px;display:none">✓ Metas salvas!</div>
+        </div>
+      </div>
+
+      <!-- GESTOR: GERENCIAR EQUIPE -->
+      <div class="view" id="view-gestor-team-users">
+        <div class="page-header"><div><div class="page-title">Gerenciar Equipe</div><div class="page-sub">Cadastre e gerencie os operadores da sua equipe</div></div></div>
+        <div class="card" style="max-width:680px">
+          <div class="card-title" style="margin-bottom:.9rem">👥 Operadores da Equipe</div>
+          <div id="gestor-agents-list"></div>
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">+ Adicionar Operador</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <input id="gestor-new-agent" placeholder="Nome do operador..." style="font-size:12px;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;">
+              <input id="gestor-new-agent-email" placeholder="E-mail do operador *" type="email" style="font-size:12px;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;">
+              <button onclick="gestorAddAgent()" style="background:var(--ig-green);color:#fff;border:none;border-radius:var(--r);padding:9px;font-size:13px;cursor:pointer;font-weight:700">+ Adicionar Operador</button>
+            </div>
+            <div style="font-size:11px;color:var(--text2);margin-top:6px">O operador será vinculado automaticamente à sua equipe.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OPERADOR: DASHBOARD -->
+      <div class="view" id="view-op-dashboard">
+        <div class="page-header"><div><div class="page-title" id="op-title">Meu Desempenho</div><div class="page-sub" id="op-sub"></div></div></div>
+        <div class="kpi-grid kpi-grid-5">
+          <div class="kpi" style="--kpi-color:var(--blue)"><div class="kpi-label">Monitorias</div><div class="kpi-val" id="op-total">—</div><div class="kpi-sub" id="op-total-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--red)"><div class="kpi-label">Perda / Monitoria</div><div class="kpi-val c-red" id="op-loss">—</div><div class="kpi-sub" id="op-loss-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--red)"><div class="kpi-label">Total Perdido no Mês</div><div class="kpi-val c-red" id="op-total-loss">—</div><div class="kpi-sub" id="op-total-loss-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--amber)"><div class="kpi-label">Média de Qualidade</div><div class="kpi-val" id="op-csat">—</div><div class="kpi-sub" id="op-csat-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--green)"><div class="kpi-label">Meta Mínima</div><div class="kpi-val" id="op-goal">—</div><div class="kpi-sub" id="op-goal-s"></div></div>
+        </div>
+        <div class="g2">
+          <div class="card"><div class="card-title" style="margin-bottom:.9rem">Pontos Perdidos por Avaliação</div><div id="op-loss-list"></div></div>
+          <div class="card"><div class="card-title" style="margin-bottom:.9rem">Pendências mais frequentes</div><div id="op-fails"></div></div>
+        </div>
+      </div>
+
+      <!-- OPERADOR: HISTÓRICO -->
+      <div class="view" id="view-op-history">
+        <div class="page-header"><div><div class="page-title">Meu Histórico</div></div></div>
+        <div class="card"><div class="tw"><table class="tbl">
+          <thead><tr><th>Data</th><th>Mês</th><th>Protocolo</th><th style="text-align:center">Pontuação</th><th style="text-align:center">Pts Perdidos</th><th>Observação</th><th style="text-align:center">Status</th></tr></thead>
+          <tbody id="op-history-tbody"></tbody>
+        </table></div></div>
+      </div>
+
+      <!-- OPERADOR: EVOLUÇÃO -->
+      <div class="view" id="view-op-evolution">
+        <div class="page-header">
+          <div><div class="page-title">Minha Evolução</div></div>
+          <button onclick="exportPDF('view-op-evolution',currentUser?.name)" class="btn-green no-print" style="font-size:12px;padding:5px 14px">⬇ Exportar PDF</button>
+        </div>
+        <div class="card" style="margin-bottom:12px"><div class="card-title" style="margin-bottom:.9rem">Pontuação por Mês</div><div style="position:relative;height:240px"><canvas id="chart-op-evo"></canvas></div></div>
+        <div class="g3" id="op-evo-months"></div>
+      </div>
+
+      <!-- SENIOR: PAINEL -->
+      <div class="view" id="view-senior-overview">
+        <div class="page-header">
+          <div><div class="page-title">Painel Sênior</div><div class="page-sub" id="senior-ov-sub"></div></div>
+        </div>
+        <div class="kpi-grid kpi-grid-5">
+          <div class="kpi" style="--kpi-color:var(--blue)"><div class="kpi-label">Monitorias</div><div class="kpi-val" id="senior-total">—</div><div class="kpi-sub" id="senior-total-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--green)"><div class="kpi-label">Pontuação Média</div><div class="kpi-val" id="senior-avg">—</div><div class="kpi-sub" id="senior-avg-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--red)"><div class="kpi-label">Total Pts Perdidos</div><div class="kpi-val c-red" id="senior-loss">—</div><div class="kpi-sub" id="senior-loss-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--amber)"><div class="kpi-label">Média de Qualidade</div><div class="kpi-val" id="senior-csat">—</div><div class="kpi-sub" id="senior-csat-s"></div></div>
+          <div class="kpi" style="--kpi-color:var(--purple)"><div class="kpi-label">Gestoras</div><div class="kpi-val" id="senior-gestores">—</div><div class="kpi-sub" id="senior-gestores-s"></div></div>
+        </div>
+        <div class="g2">
+          <div class="card"><div class="card-hd"><span class="card-title">Pontuação Média por Equipe</span></div><div style="position:relative;height:210px"><canvas id="chart-senior-teams"></canvas></div></div>
+          <div class="card"><div class="card-hd"><span class="card-title">Evolução Mensal</span></div><div style="position:relative;height:210px"><canvas id="chart-senior-trend"></canvas></div></div>
+        </div>
+        <div class="g2">
+          <div class="card"><div class="card-title" style="margin-bottom:1rem">Distribuição de Resultados</div><div class="dist-grid" id="senior-dist"></div></div>
+          <div class="card"><div class="card-title" style="margin-bottom:1rem">Top 5 Operadores do Mês</div><div id="senior-top5"></div></div>
+        </div>
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-title" style="margin-bottom:.9rem">🧑‍💼 Minhas Gestoras</div>
+          <div id="senior-gestoras-cards" style="display:flex;flex-wrap:wrap;gap:10px"></div>
+        </div>
+      </div>
+
+      <!-- SENIOR: EQUIPES -->
+      <div class="view" id="view-senior-teams">
+        <div class="page-header"><div><div class="page-title">Equipes das Gestoras</div></div></div>
+        <div id="senior-teams-grid" class="g2"></div>
+      </div>
+
+      <!-- SENIOR: RANKING -->
+      <div class="view" id="view-senior-ranking">
+        <div class="page-header"><div><div class="page-title">Ranking de Operadores</div></div></div>
+        <div class="card">
+          <input class="sb" id="senior-rank-search" placeholder="🔍 Buscar operador..." oninput="renderSeniorRanking()" style="margin-bottom:12px">
+          <div class="tw"><table class="tbl">
+            <thead><tr><th>#</th><th>Operador</th><th>Equipe</th><th>Gestora</th><th style="text-align:center">Mon.</th><th style="text-align:center">Pontuação</th><th>Barra</th><th style="text-align:center">Qualidade</th><th style="text-align:center">Status</th></tr></thead>
+            <tbody id="senior-rank-tbody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- RECORDS -->
+      <div class="view" id="view-records">
+        <div class="page-header">
+          <div><div class="page-title">Registros</div><div class="page-sub" id="rec-sub"></div></div>
+          <div style="display:flex;gap:8px;" class="no-print">
+            <button id="btn-pdf-all" onclick="exportRecordsPDF()" class="btn btn-sec btn-sm" style="display:none">⬇ PDF Selecionados</button>
+            <button id="btn-del-batch" onclick="deleteSelectedRecords()" class="btn btn-danger btn-sm" style="display:none">🗑 Excluir Selecionados</button>
+          </div>
+        </div>
+        <div class="batch-bar no-print" id="batch-bar" style="display:none">
+          <span id="batch-count">0 selecionados</span>
+          <button class="btn-pdf" onclick="exportRecordsPDF()">⬇ Exportar PDF</button>
+          <button class="btn-del" onclick="deleteSelectedRecords()">🗑 Excluir Selecionados</button>
+          <button class="btn-clear" onclick="clearSelection()">✕ Limpar seleção</button>
+        </div>
+        <div class="card">
+          <div class="tw"><table class="tbl" id="rec-table">
+            <thead><tr>
+              <th class="no-print"><input type="checkbox" id="rec-check-all" onchange="toggleAllRecords(this.checked)" title="Selecionar todos"></th>
+              <th>Data</th><th>Protocolo</th><th>Operador</th><th>Gestor</th>
+              <th style="text-align:center">Pontuação</th><th style="text-align:center">Pts Perdidos</th>
+              <th>Pendências</th><th style="text-align:center">Qualidade</th><th style="text-align:center">Status</th><th class="no-print"></th>
+            </tr></thead>
+            <tbody id="rec-tbody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- ADMIN: CONFIGURAÇÕES -->
+      <div class="view" id="view-admin-settings">
+        <div id="cfg-locked">
+          <div class="page-title" style="margin-bottom:.5rem">Configurações</div>
+          <div class="page-sub" style="margin-bottom:1.5rem">Área restrita ao administrador</div>
+          <div class="card" style="max-width:380px;text-align:center;padding:2rem">
+            <div style="font-size:36px;margin-bottom:1rem">🔒</div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:.5rem">Acesso Restrito</div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:1.5rem">Insira o PIN de administrador para continuar.</div>
+            <button class="btn btn-dark" onclick="showPin()" style="width:100%;padding:10px">Entrar como Admin</button>
+          </div>
+        </div>
+        <div id="cfg-unlocked" style="display:none">
+          <div class="page-header">
+            <div><div class="page-title">Configurações</div><div class="page-sub">Gerencie usuários, equipes, meses e pontuação</div></div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="badge bg-amber">🔓 Admin</span>
+              <button class="btn btn-sec btn-sm" onclick="lockCfg()">Sair</button>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-hd">
+              <span class="card-title">🏢 Equipes</span>
+              <button onclick="cfgShowAddTeam()" class="btn btn-dark btn-sm">+ Nova Equipe</button>
+            </div>
+            <div id="cfg-teams-list"></div>
+            <div id="add-team-form" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-top:10px">
+              <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em">Nova Equipe</div>
+              <div class="fr2">
+                <div class="field"><label>Nome da Equipe</label><input id="new-team-name" placeholder="ex: Equipe Gamma"></div>
+                <div class="field"><label>Gestor Responsável</label><select id="new-team-manager"><option value="">Selecione...</option></select></div>
+              </div>
+              <div class="field"><label>Modelo de Avaliação</label>
+                <select id="new-team-criteria"><option value="">— Selecione um modelo —</option></select>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:4px">
+                <button onclick="cfgAddTeam()" class="btn btn-dark btn-sm">Criar Equipe</button>
+                <button onclick="document.getElementById('add-team-form').style.display='none'" class="btn btn-sec btn-sm">Cancelar</button>
+              </div>
+              <div id="add-team-err" style="font-size:11px;color:var(--red);margin-top:6px;"></div>
+            </div>
+          </div>
+          <div class="g2" style="align-items:start">
+            <div class="card">
+              <div class="card-title" style="margin-bottom:.9rem">👥 Usuários / Operadores</div>
+              <div id="cfg-agents"></div>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px">
+                <input id="new-agent" placeholder="Nome do operador..." style="font-size:12px;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;width:100%">
+                <input id="new-agent-email" placeholder="E-mail do operador *" type="email" style="font-size:12px;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;width:100%">
+                <button onclick="cfgAddAgent()" style="background:var(--ig-green);color:#fff;border:none;border-radius:var(--r);padding:6px 13px;font-size:12px;cursor:pointer;font-weight:700">+ Adicionar</button>
+              </div>
+              <div style="font-size:11px;color:var(--text2)">Registros históricos são mantidos ao remover.</div>
+            </div>
+            <div class="card">
+              <div class="card-title" style="margin-bottom:.9rem">🧑‍💼 Gestores</div>
+              <div id="cfg-managers"></div>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px">
+                <input id="new-manager" placeholder="Nome do gestor..." style="font-size:12px;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;width:100%">
+                <input id="new-manager-email" placeholder="E-mail do gestor *" type="email" style="font-size:12px;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;width:100%">
+                <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 0">
+                  <input type="checkbox" id="new-manager-is-senior" style="accent-color:#AF52DE;width:14px;height:14px">
+                  <span>🌟 Cadastrar como <strong style="color:#AF52DE">Gestor Sênior</strong> (sem equipe própria)</span>
+                </label>
+                <button onclick="cfgAddManager()" style="background:var(--ig-green);color:#fff;border:none;border-radius:var(--r);padding:6px 13px;font-size:12px;cursor:pointer;font-weight:700">+ Adicionar</button>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:12px">
+            <div class="card-title" style="margin-bottom:.9rem">👑 Administradores</div>
+            <div id="cfg-admins"></div>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px">
+              <input id="new-admin" placeholder="Nome do administrador..." style="font-size:12px;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;width:100%">
+              <input id="new-admin-email" placeholder="E-mail do administrador *" type="email" style="font-size:12px;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;width:100%">
+              <button onclick="cfgAddAdmin()" style="background:var(--amber);color:#fff;border:none;border-radius:var(--r);padding:6px 13px;font-size:12px;cursor:pointer;font-weight:700">+ Adicionar Admin</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:12px">
+            <div class="card-title" style="margin-bottom:.9rem">Vincular Gestoras ao Gestor Sênior</div>
+            <div id="cfg-assign-senior"></div>
+          </div>
+          <div class="card" style="margin-top:12px">
+            <div class="card-title" style="margin-bottom:.9rem">Vincular Operadores às Equipes</div>
+            <div id="cfg-assign"></div>
+          </div>
+          <div class="card" style="margin-top:12px">
+            <div class="card-title" style="margin-bottom:.9rem">Meses disponíveis</div>
+            <div class="tag-row" id="cfg-months"></div>
+            <div class="add-row" style="max-width:340px">
+              <input id="new-month" placeholder="ex: Ago/2025...">
+              <button onclick="cfgAddMonth()">+ Mês</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:12px">
+            <div class="card-title" style="margin-bottom:.9rem">🎯 Critérios por Equipe (Modelos de Avaliação)</div>
+            <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Cada equipe pode usar um modelo de avaliação diferente.</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+              <select id="cfg-criteria-team-sel" style="font-size:13px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;flex:1;min-width:160px" onchange="cfgLoadTeamCriteria()">
+                <option value="global">🌐 Modelo Padrão Global</option>
+              </select>
+              <button onclick="cfgNewCriteriaTemplate()" class="btn btn-sec btn-sm">+ Novo Modelo</button>
+            </div>
+            <div id="cfg-criteria-editor"></div>
+          </div>
+          <div class="card" style="margin-top:12px">
+            <div class="card-title" style="margin-bottom:.9rem">🔐 PIN de Administrador</div>
+            <div style="display:flex;gap:6px;max-width:320px">
+              <input type="password" id="cfg-new-pin" placeholder="Novo PIN (4 dígitos)" maxlength="4" style="flex:1;font-size:13px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;">
+              <button onclick="cfgChangePin()" class="btn btn-dark btn-sm">Salvar PIN</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- MODAL NOVA MONITORIA -->
+<div class="mb" id="modal" style="display:none">
+  <div class="mo">
+    <div class="mo-hd"><h3>Nova Monitoria</h3><button class="mo-cl" onclick="closeModal()">✕</button></div>
+    <div class="mo-body">
+      <div class="fr3">
+        <div class="field"><label>Protocolo</label><input id="f-proto" placeholder="ex: 00123"></div>
+        <div class="field"><label>Mês</label><select id="f-month"></select></div>
+        <div class="field"><label>Data</label><input id="f-date" type="date"></div>
+      </div>
+      <div class="fr2">
+        <div class="field"><label>Operador</label><select id="f-agent"><option value="">Selecione...</option></select></div>
+        <div class="field"><label>Gestor</label><select id="f-manager"><option value="">Selecione...</option></select></div>
+      </div>
+      <div class="sep">Itens de qualidade — marque o que NÃO foi feito</div>
+      <div id="modal-quality"></div>
+      <div class="sep" style="color:var(--red)">Itens críticos — zera a monitoria</div>
+      <div id="modal-critical"></div>
+      <div class="score-prev">
+        <div>
+          <div style="font-size:12px;color:rgba(255,255,255,.5)">Pontuação final <span id="f-max-label">(máx. 60 pts)</span></div>
+          <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px">Pontos perdidos: <strong id="f-loss-preview" style="color:var(--red)">0</strong></div>
+          <div class="crit-warn" id="crit-warn">⚠ Item crítico marcado — monitoria zerada</div>
+        </div>
+        <div class="score-prev-val" id="score-prev" style="color:var(--green)">60</div>
+      </div>
+      <div class="field"><label>Observações</label><input id="f-obs" placeholder="Comentários (opcional)"></div>
+      <div class="sep">Perfil do Colaborador</div>
+      <div class="fr2" style="margin-bottom:10px">
+        <div class="field">
+          <label>Perfil identificado</label>
+          <div id="f-perfil-options" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
+        </div>
+        <div class="field">
+          <label>Nível</label>
+          <div id="f-nivel-options" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mo-ft">
+      <button class="btn btn-sec" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-dark" onclick="addEntry()">Salvar Monitoria</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN MODAL -->
+<div class="pin-screen" id="pin-modal" style="display:none">
+  <div class="pin-box">
+    <div style="font-size:30px;margin-bottom:.75rem">🔐</div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:.3rem">PIN de Administrador</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:1.25rem">4 dígitos</div>
+    <div class="pin-dots" id="pin-dots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div>
+    <div class="pin-grid">
+      <button class="pk" onclick="pk('1')">1</button><button class="pk" onclick="pk('2')">2</button><button class="pk" onclick="pk('3')">3</button>
+      <button class="pk" onclick="pk('4')">4</button><button class="pk" onclick="pk('5')">5</button><button class="pk" onclick="pk('6')">6</button>
+      <button class="pk" onclick="pk('7')">7</button><button class="pk" onclick="pk('8')">8</button><button class="pk" onclick="pk('9')">9</button>
+      <button class="pk" onclick="pkBk()" style="font-size:14px">⌫</button><button class="pk" onclick="pk('0')">0</button><button class="pk" onclick="hidePin()" style="font-size:13px;color:var(--text2)">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--red);margin-top:8px;min-height:16px" id="pin-err"></div>
+  </div>
+</div>
+
+<!-- INVITE TOAST -->
+<div class="invite-toast" id="invite-toast">
+  <div class="invite-toast-icon">📧</div>
+  <div class="invite-toast-text" id="invite-toast-text"></div>
+</div>
+
+<script>
+const K={STATE:'qd_state_v8',PIN:'qd_pin_v6',GOALS:'qd_goals_v6',SCORING:'qd_scoring_v6'};
+function ls(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch{return null}}
+function ss(k,v){localStorage.setItem(k,JSON.stringify(v))}
+
+const CRITERIA_EMPTY={id:'',name:'',maxScore:60,monPerOp:8,items:[],criticalItems:[]};
+const SCORING_DEF={maxScore:60,items:[]};
+
+const PERFIS={
+  analitico:{id:'analitico',label:'Analítico',icon:'🧠',
+    desc:['Compreende rapidamente a demanda','Faz perguntas assertivas','Evita erros de interpretação','Usa bem as informações disponíveis']},
+  comunicador:{id:'comunicador',label:'Comunicador',icon:'🗣️',
+    desc:['Se expressa com clareza','Demonstra empatia','Mantém comunicação fluida','Explica bem processos']},
+  executor:{id:'executor',label:'Executor',icon:'🚀',
+    desc:['Age com rapidez','Foca na resolução','Evita retrabalho','É objetivo']},
+  negociador:{id:'negociador',label:'Negociador',icon:'🤝',
+    desc:['Contorna objeções','Persuasivo','Consegue reverter situações','Atua além do básico']},
+  operacional:{id:'operacional',label:'Operacional',icon:'⚙️',
+    desc:['Segue processos corretamente','Organizado','Baixo erro técnico','Consistência no padrão']},
+  em_desenvolvimento:{id:'em_desenvolvimento',label:'Em desenvolvimento',icon:'📈',
+    desc:['Dificuldade em múltiplos pontos','Necessita acompanhamento próximo','Insegurança na condução']}
+};
+const NIVEIS={
+  alto:{id:'alto',label:'Alto',color:'#B8860B',bg:'rgba(184,134,11,.12)',border:'rgba(184,134,11,.35)'},
+  medio:{id:'medio',label:'Médio',color:'#888',bg:'rgba(136,136,136,.12)',border:'rgba(136,136,136,.35)'},
+  em_desenvolvimento:{id:'em_desenvolvimento',label:'Em desenvolvimento',color:'#aaaaaa',bg:'rgba(170,170,170,.10)',border:'rgba(170,170,170,.3)'}
+};
+
+function getAllCriteria(){return criteria||{};}
+function getCriteria(cid){return (criteria||{})[cid]||CRITERIA_EMPTY;}
+function saveCriteria(all){criteria=all;saveState();}
+function getTeamCriteria(teamId){const t=teams.find(x=>x.id===teamId);if(!t?.criteriaId)return CRITERIA_EMPTY;return getCriteria(t.criteriaId);}
+function MAX(cid){return getCriteria(cid).maxScore||60;}
+function getScoring(){const s=ls(K.SCORING)||SCORING_DEF;if(!s.items)s.items=[];return s;}
+function getGoals(){return ls(K.GOALS)||{};}
+function getTeamGoal(teamId){return(getGoals()[teamId])||{minScore:36,csatGoal:80,monGoal:8,monPerOp:8};}
+
+let adminPin=ls(K.PIN)||'1234';
+let cfgUnlocked=false;
+let users,teams,months,records,criteria;
+let selectedRecords=new Set();
+
+function loadState(){
+  const s=ls(K.STATE);
+  if(s){users=s.users;teams=s.teams;months=s.months;records=s.records;criteria=s.criteria||{};}
+  else seedState();
+  if(!teams)teams=[];
+  if(!users)users=[];
+  if(!months)months=[];
+  if(!records)records={};
+  if(!criteria)criteria={};
+}
+function seedState(){
+  teams=[];users=[];months=[];records={};criteria={};
+  saveState();
+}
+
+let currentUser=null,currentMonth='',currentTeamFilter='',charts={};
+const AV_BG=['#D1F2D9','#E3F0FF','#FEF3D0','#F2E5FF','#FFE5EA'];
+const AV_FG=['#1A6330','#0040A0','#7A4800','#4A0080','#7A0020'];
+function avStyle(n){const i=Math.abs([...n].reduce((h,c)=>((h<<5)-h+c.charCodeAt(0))|0,0))%AV_BG.length;return{bg:AV_BG[i],fg:AV_FG[i]};}
+function initials(n){return n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();}
+function scoreColor(s,mx){mx=mx||60;return s>=mx*.7?'#34C759':s>=mx*.5?'#FF9500':'#FF3B30';}
+function classify(s,mx){
+  mx=mx||60;
+  if(s===0)return{l:'Zerada',c:'bg-dark'};
+  if(s>=mx*.9)return{l:'Excelente',c:'bg-green'};
+  if(s>=mx*.7)return{l:'Bom',c:'bg-green'};
+  if(s>=mx*.5)return{l:'Regular',c:'bg-amber'};
+  return{l:'Crítico',c:'bg-red'};
+}
+
+function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const pw=document.getElementById('login-pass').value;
+  const errEl=document.getElementById('login-error');
+  errEl.textContent='';
+  if(!email){errEl.textContent='Informe o e-mail.';return;}
+  if(!pw){errEl.textContent='Informe a senha.';return;}
+  const u=users.find(x=>x.email&&x.email.toLowerCase()===email.toLowerCase());
+  if(!u){errEl.textContent='E-mail não encontrado.';return;}
+  if(u.active===false){errEl.textContent='Usuário desativado. Contacte o administrador.';return;}
+  if(u.password!==pw){errEl.textContent='Senha incorreta.';return;}
+  login(u);
+}
+
+function login(u){
+  currentUser=u;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  currentMonth=months[months.length-1]||'';
+  buildHeader();buildMonthPicker();buildNav();
+  startPolling();
+  if(u.role==='admin')navTo('admin-overview');
+  else if(u.role==='gestor')navTo('gestor-overview');
+  else if(u.role==='gestor_senior')navTo('senior-overview');
+  else navTo('op-dashboard');
+}
+function doLogout(){
+  if(_pollInterval){clearInterval(_pollInterval);_pollInterval=null;}
+  currentUser=null;cfgUnlocked=false;
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-loading').style.display='none';
+  document.getElementById('login-form-wrap').style.display='block';
+  document.getElementById('login-email').value='';
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-error').textContent='';
+}
+
+function buildHeader(){
+  const u=currentUser,st=avStyle(u.name);
+  const av=document.getElementById('hdr-avatar');
+  av.style.background=st.bg;av.style.color=st.fg;av.textContent=initials(u.name);
+  document.getElementById('hdr-name').textContent=u.name.split(' ')[0];
+  const roleEl=document.getElementById('hdr-role');
+  roleEl.textContent=u.role==='admin'?'Admin':u.role==='gestor_senior'?'Sênior':u.role==='gestor'?'Gestor':'Operador';
+  roleEl.className='user-chip-role role-'+(u.role==='operador'?'op':u.role==='gestor_senior'?'senior':u.role);
+  document.getElementById('btn-new-mon').style.display=(u.role==='admin'||u.role==='gestor'||u.role==='gestor_senior')?'block':'none';
+  const tw=document.getElementById('filter-team-wrap');
+  if(u.role==='admin'){
+    tw.style.display='block';
+    renderTeamFilterOptions();
+  }else if(tw) tw.style.display='none';
+  const team=teams.find(t=>t.id===u.teamId);
+  document.getElementById('sb-user-info').innerHTML=`<span style="font-size:12px;font-weight:600;color:var(--text)">${u.name}</span><br><span style="font-size:11px;color:var(--text2)">${u.role==='admin'?'Administrador':u.role==='gestor_senior'?'Gestor Sênior':u.role==='gestor'?'Gestor · '+(team?.name||''):'Operador · '+(team?.name||'')}</span>`;
+}
+function buildMonthPicker(){
+  const sel=document.getElementById('global-month');
+  sel.innerHTML='<option value="__ALL__"'+(currentMonth==='__ALL__'?' selected':'')+'>📅 Todos os Meses</option>'+months.map(m=>`<option value="${m}"${m===currentMonth?' selected':''}>${m}</option>`).join('');
+}
+function buildNav(){
+  const r=currentUser.role;
+  document.getElementById('nav-admin').style.display=r==='admin'?'block':'none';
+  document.getElementById('nav-gestor').style.display=r==='gestor'?'block':'none';
+  document.getElementById('nav-senior').style.display=r==='gestor_senior'?'block':'none';
+  document.getElementById('nav-op').style.display=r==='operador'?'block':'none';
+}
+function onMonthChange(){currentMonth=document.getElementById('global-month').value;refreshView();}
+let selectedTeams=new Set();
+function toggleTeamDropdown(){
+  const dd=document.getElementById('filter-team-dropdown');
+  if(dd)dd.style.display=dd.style.display==='none'?'block':'none';
+}
+function renderTeamFilterOptions(){
+  const el=document.getElementById('filter-team-options');if(!el)return;
+  el.innerHTML=`<label style="display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;font-size:12px;color:rgba(255,255,255,.8);transition:background .1s" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background=''">
+    <input type="checkbox" id="ft-all" ${selectedTeams.size===0?'checked':''} onchange="selectAllTeams(this.checked)" style="accent-color:#00cc44">
+    <span>Todas as equipes</span>
+  </label>
+  <div style="height:1px;background:rgba(255,255,255,.1);margin:4px 0"></div>
+  ${teams.map(t=>`<label style="display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;font-size:12px;color:rgba(255,255,255,.8);transition:background .1s" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background=''">
+    <input type="checkbox" id="ft-${t.id}" value="${t.id}" ${selectedTeams.has(t.id)?'checked':''} onchange="toggleTeamFilter('${t.id}',this.checked)" style="accent-color:#00cc44">
+    <span>${t.name}</span>
+  </label>`).join('')}`;
+}
+function selectAllTeams(checked){
+  if(checked){selectedTeams.clear();}
+  document.querySelectorAll('[id^="ft-"]').forEach(cb=>{cb.checked=checked||cb.id==='ft-all';});
+  if(!checked)return;
+  updateTeamFilterLabel();refreshView();
+}
+function toggleTeamFilter(teamId,checked){
+  if(checked)selectedTeams.add(teamId);else selectedTeams.delete(teamId);
+  const allCb=document.getElementById('ft-all');
+  if(allCb)allCb.checked=selectedTeams.size===0;
+  updateTeamFilterLabel();refreshView();
+}
+function updateTeamFilterLabel(){
+  const el=document.getElementById('filter-team-label');if(!el)return;
+  if(selectedTeams.size===0){el.textContent='Todas as equipes';}
+  else if(selectedTeams.size===1){const t=teams.find(x=>x.id===[...selectedTeams][0]);el.textContent=t?.name||'1 equipe';}
+  else{el.textContent=selectedTeams.size+' equipes';}
+}
+function onTeamFilter(){currentTeamFilter=document.getElementById('filter-team')?.value||'';refreshView();}
+// Close dropdown when clicking outside
+document.addEventListener('click',e=>{
+  const wrap=document.getElementById('filter-team-wrap');
+  if(wrap&&!wrap.contains(e.target)){
+    const dd=document.getElementById('filter-team-dropdown');
+    if(dd)dd.style.display='none';
+  }
+});
+function nav(el){
+  document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');navTo(el.dataset.v);
+}
+function navTo(id){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const v=document.getElementById('view-'+id);if(v)v.classList.add('active');
+  renderView(id);
+}
+function refreshView(){const a=document.querySelector('.view.active');if(a)renderView(a.id.replace('view-',''));}
+function renderView(id){
+  if(id==='admin-overview')renderAdminOverview();
+  else if(id==='admin-teams')renderAdminTeams();
+  else if(id==='admin-ranking')renderAdminRanking();
+  else if(id==='records')renderRecords();
+  else if(id==='gestor-overview')renderGestorOverview();
+  else if(id==='gestor-operators')renderGestorOperators();
+  else if(id==='gestor-compare')renderGestorCompare();
+  else if(id==='gestor-settings')renderGestorSettings();
+  else if(id==='gestor-team-users')renderGestorTeamUsers();
+  else if(id==='senior-overview')renderSeniorOverview();
+  else if(id==='senior-teams')renderSeniorTeams();
+  else if(id==='senior-ranking')renderSeniorRanking();
+  else if(id==='op-dashboard')renderOpDashboard();
+  else if(id==='op-history')renderOpHistory();
+  else if(id==='op-evolution')renderOpEvolution();
+  else if(id==='admin-settings')renderAdminSettings();
+}
+
+function getMonthData(month){
+  if(month==='__ALL__')return months.flatMap(m=>records[m]||[]);
+  return records[month]||[];
+}
+function getAgentCurrentTeamId(agentId){
+  const u=users.find(x=>x.id===agentId);
+  return u?.teamId||null;
+}
+function filtered(month){
+  let d=getMonthData(month);
+  if(currentUser.role==='gestor'){
+    // Use current teamId of the agent (reflects transfers)
+    const myOps=users.filter(u=>u.role==='operador'&&u.teamId===currentUser.teamId&&u.active!==false).map(u=>u.id);
+    d=d.filter(r=>myOps.includes(r.agentId));
+  }
+  else if(currentUser.role==='gestor_senior'){
+    const myTeamIds=getSeniorTeams().map(t=>t.id);
+    const myOps=users.filter(u=>u.role==='operador'&&myTeamIds.includes(u.teamId)).map(u=>u.id);
+    d=d.filter(r=>myOps.includes(r.agentId));
+  }
+  else if(selectedTeams&&selectedTeams.size>0){
+    const myOps=users.filter(u=>u.role==='operador'&&selectedTeams.has(u.teamId)).map(u=>u.id);
+    d=d.filter(r=>myOps.includes(r.agentId));
+  }
+  return d;
+}
+function opData(month,agentId){
+  if(month==='__ALL__')return months.flatMap(m=>(records[m]||[]).filter(r=>r.agentId===agentId));
+  return getMonthData(month).filter(r=>r.agentId===agentId);
+}
+function avgOf(arr,k){return arr.length?Math.round(arr.reduce((s,x)=>s+x[k],0)/arr.length):0;}
+function pct(a,b){return b?Math.round(a/b*100):0;}
+function csat(arr){if(!arr.length)return 0;const v=arr.filter(r=>r.maxScore&&r.maxScore>0);return v.length?Math.round(v.reduce((s,r)=>s+Math.round(r.score/r.maxScore*100),0)/v.length):0;}
+function agentStats(month,agentId){
+  const rows=opData(month,agentId);
+  if(!rows.length)return null;
+  const avg=avgOf(rows,'score'),avgLoss=avgOf(rows,'loss');
+  const totalLoss=rows.reduce((s,r)=>s+r.loss,0);
+  const maxScorePerMon=rows[0]?.maxScore||60;
+  const goal=getTeamGoal(rows[0]?.teamId||'');
+  const monPerOp=goal.monPerOp||8;
+  const monthlyMaxActual=maxScorePerMon*rows.length;
+  const lossRatio=monthlyMaxActual?Math.round(totalLoss/monthlyMaxActual*100):0;
+  return{rows,count:rows.length,avg,avgLoss,totalLoss,monthlyMax:maxScorePerMon*monPerOp,monthlyMaxActual,lossRatio,zeros:rows.filter(r=>r.score===0).length,csatVal:csat(rows),maxScore:maxScorePerMon};
+}
+function mkChart(id,cfg){
+  const el=document.getElementById(id);if(!el)return;
+  if(charts[id])charts[id].destroy();
+  charts[id]=new Chart(el,cfg);return charts[id];
+}
+function kpi(id,val,cls,sub){
+  const el=document.getElementById(id);if(!el)return;
+  el.textContent=val;el.className='kpi-val '+(cls||'');
+  const s=document.getElementById(id+'-s');if(s)s.textContent=sub||'';
+}
+function renderDist(elId,data,total){
+  const cats=[
+    {l:'Excelente',sub:'≥90%',color:'#34C759',fn:r=>r.score>=r.maxScore*.9},
+    {l:'Bom',sub:'70–89%',color:'#007AFF',fn:r=>r.score>=r.maxScore*.7&&r.score<r.maxScore*.9},
+    {l:'Regular',sub:'50–69%',color:'#FF9500',fn:r=>r.score>=r.maxScore*.5&&r.score<r.maxScore*.7},
+    {l:'Crítico',sub:'<50%',color:'#FF3B30',fn:r=>r.score>0&&r.score<r.maxScore*.5},
+    {l:'Zerada',sub:'crítico',color:'#2C2C2E',fn:r=>r.score===0},
+  ];
+  document.getElementById(elId).innerHTML=cats.map(c=>{
+    const cnt=data.filter(c.fn).length,p=total?Math.round(cnt/total*100):0;
+    return`<div class="dist-c"><div style="font-size:22px;font-weight:800;color:${c.color}">${p}%</div><div style="font-size:11px;font-weight:700">${c.l}</div><div style="font-size:10px;color:var(--text2)">${c.sub}</div><div style="font-size:10px;color:var(--text2)">${cnt}</div></div>`;
+  }).join('');
+}
+
+function renderAdminOverview(){
+  const data=filtered(currentMonth),total=data.length;
+  const avg=total?avgOf(data,'score'):0,csatAvg=csat(data);
+  const activeTeams=[...new Set(data.map(r=>r.teamId))].length;
+  const prevM=months[months.indexOf(currentMonth)-1];
+  const prevData=prevM?filtered(prevM):[];
+  const delta=prevData.length?avg-avgOf(prevData,'score'):null;
+  document.getElementById('ov-sub').textContent=(currentMonth==='__ALL__'?'Todos os Meses':currentMonth)+' · '+total+' monitorias';
+  const totalLoss=data.reduce((s,r)=>s+(r.loss||0),0);
+  const avgLoss=total?Math.round(totalLoss/total):0;
+  kpi('ov-total',total||'—','','total no período');
+  kpi('ov-avg',avg,avg>=42?'c-green':'c-red',delta!==null?`${delta>0?'↑ +':'↓ '}${delta} vs mês ant.`:'');
+  kpi('ov-totloss',totalLoss,'c-red','média −'+avgLoss+' por mon.');
+  kpi('ov-csat',csatAvg+'%',csatAvg>=80?'c-green':'c-amber','Média de Qualidade');
+  kpi('ov-teams',activeTeams,'','equipes com monitorias');
+  // Only show teams that exist AND have data in current period
+  const tStats=teams.filter(t=>data.some(r=>r.teamId===t.id)).map(t=>{const td=data.filter(r=>r.teamId===t.id);return{name:t.name,avg:td.length?avgOf(td,'score'):0,maxScore:td[0]?.maxScore||60};});
+  const chartMax=tStats.length?Math.max(...tStats.map(t=>t.maxScore),60):60;
+  mkChart('chart-ov-teams',{type:'bar',data:{labels:tStats.map(t=>t.name),datasets:[{data:tStats.map(t=>t.avg),backgroundColor:tStats.map(t=>scoreColor(t.avg,t.maxScore)+'99'),borderColor:tStats.map(t=>scoreColor(t.avg,t.maxScore)),borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{min:0,max:chartMax,ticks:{font:{size:10}},grid:{color:'#e0e0e522'}}}}});
+  const trendData=months.map(m=>{const d2=filtered(m);return d2.length?avgOf(d2,'score'):null;});
+  mkChart('chart-ov-trend',{type:'line',data:{labels:months,datasets:[{data:trendData,borderColor:'#34C759',backgroundColor:'#34C75912',pointRadius:5,tension:0.3,fill:true,borderWidth:2.5,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{min:0,max:60,ticks:{font:{size:10}},grid:{color:'#e0e0e522'}}}}});
+  renderDist('ov-dist',data,total);
+  // Filter ops by selected teams
+  const filteredTeamIds=selectedTeams&&selectedTeams.size>0?[...selectedTeams]:teams.map(t=>t.id);
+  const ops=users.filter(u=>u.role==='operador'&&filteredTeamIds.includes(u.teamId));
+  const opStats=ops.map(u=>{const s=agentStats(currentMonth,u.id);return s?{...s,user:u}:null;}).filter(Boolean).sort((a,b)=>b.avg-a.avg).slice(0,5);
+  document.getElementById('ov-top5').innerHTML=opStats.length?opStats.map((s,i)=>{
+    const st=avStyle(s.user.name),cls=classify(s.avg,s.maxScore);
+    return`<div class="team-rank-item"><div class="trk-rank" style="color:${i<3?'#FF9500':'var(--text2)'}">${['🥇','🥈','🥉'][i]||i+1}</div><div class="av" style="width:30px;height:30px;background:${st.bg};color:${st.fg};font-size:11px">${initials(s.user.name)}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${s.user.name}</div><div style="font-size:11px;color:var(--text2)">${teams.find(t=>t.id===s.user.teamId)?.name||''}</div></div><span class="badge ${cls.c}">${s.avg} pts</span></div>`;
+  }).join(''):'<p style="color:var(--text2);font-size:13px">Sem dados para as equipes selecionadas</p>';
+}
+
+function renderAdminTeams(){
+  const data=filtered(currentMonth);
+  document.getElementById('teams-grid').innerHTML=teams.map(t=>{
+    const td=data.filter(r=>r.teamId===t.id),avg=td.length?avgOf(td,'score'):0,csatA=csat(td);
+    const mgr=users.find(u=>u.id===t.managerId),goal=getTeamGoal(t.id);
+    const ops=users.filter(u=>u.role==='operador'&&u.teamId===t.id);
+    const opStats=ops.map(u=>{const s=agentStats(currentMonth,u.id);return s?{...s,user:u}:null;}).filter(Boolean).sort((a,b)=>b.avg-a.avg);
+    const cls=classify(avg);
+    return`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem"><div><div style="font-size:15px;font-weight:700">${t.name}</div><div style="font-size:12px;color:var(--text2)">Gestor: ${mgr?.name||'—'}</div></div><span class="badge ${cls.c}">${avg} pts</span></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1rem"><div style="background:var(--bg2);border-radius:var(--r);padding:.65rem;text-align:center"><div style="font-size:18px;font-weight:700;color:${scoreColor(avg)}">${avg}</div><div style="font-size:10px;color:var(--text2)">Média pts</div></div><div style="background:var(--bg2);border-radius:var(--r);padding:.65rem;text-align:center"><div style="font-size:18px;font-weight:700;color:${csatA>=goal.csatGoal?'var(--green)':'var(--amber)'}">${csatA}%</div><div style="font-size:10px;color:var(--text2)">Qualidade</div></div><div style="background:var(--bg2);border-radius:var(--r);padding:.65rem;text-align:center"><div style="font-size:18px;font-weight:700">${td.length}</div><div style="font-size:10px;color:var(--text2)">Monitorias</div></div></div>${opStats.slice(0,5).map((s,i)=>{const st=avStyle(s.user.name);return`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)"><div style="font-size:12px;font-weight:700;width:20px;color:var(--text3)">${i+1}</div><div class="av" style="width:24px;height:24px;background:${st.bg};color:${st.fg};font-size:10px">${initials(s.user.name)}</div><div style="flex:1;font-size:12px">${s.user.name}</div><span style="font-size:12px;font-weight:700;color:${scoreColor(s.avg)}">${s.avg}</span></div>`;}).join('')}</div>`;
+  }).join('');
+}
+
+function renderAdminRanking(){
+  const q=(document.getElementById('rank-search')||{value:''}).value.toLowerCase();
+  const tf=document.getElementById('rank-filter-team');
+  if(tf)tf.innerHTML='<option value="">Todas as equipes</option>'+teams.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+  const teamF=tf?.value||'';
+  const prevM=months[months.indexOf(currentMonth)-1];
+  const ops=users.filter(u=>u.role==='operador').filter(u=>{
+    if(teamF&&u.teamId!==teamF)return false;
+    if(q&&!u.name.toLowerCase().includes(q))return false;
+    return true;
+  });
+  const opRows=ops.map(u=>{
+    const s=agentStats(currentMonth,u.id);
+    if(!s)return{user:u,count:0,avg:0,avgLoss:0,zeros:0,csatVal:0,prev:null};
+    const prev=prevM?agentStats(prevM,u.id):null;
+    return{user:u,...s,prev:prev?prev.avg:null};
+  }).sort((a,b)=>b.avg-a.avg);
+  const medals=['🥇','🥈','🥉'];
+  const tbody=document.getElementById('rank-tbody');
+  tbody.innerHTML=opRows.map((s,i)=>{
+    const st=avStyle(s.user.name),cls=classify(s.avg,s.maxScore),sc2=scoreColor(s.avg,s.maxScore);
+    const team=teams.find(t=>t.id===s.user.teamId),mgr=users.find(u=>u.id===team?.managerId);
+    const diff=s.prev!==null?s.avg-s.prev:null;
+    const mx=s.maxScore||60;
+    return`<tr class="clickable" onclick="openOpDetailAdmin('${s.user.id}')"><td style="font-weight:800;font-size:${i<3?'16':'12'}px;color:${i<3?'#FF9500':'var(--text2)'}">${medals[i]||i+1}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:28px;height:28px;background:${st.bg};color:${st.fg};font-size:10px">${initials(s.user.name)}</div><span>${s.user.name}</span></div></td><td style="font-size:11px;color:var(--text2)">${team?.name||'—'}</td><td style="font-size:11px;color:var(--text2)">${mgr?.name||'—'}</td><td style="text-align:center;color:var(--text2);font-size:12px">${s.count}</td><td style="text-align:center;font-weight:800;color:${sc2};font-size:16px">${s.avg}<span style="font-size:10px;font-weight:400;color:var(--text3)">/${mx}</span></td><td><div class="sbar-w"><div class="sbar" style="width:${pct(s.avg,mx)}%;background:${sc2}"></div></div></td><td style="text-align:center;font-weight:700;color:var(--red)">−${s.avgLoss}</td><td style="text-align:center;font-weight:700;color:var(--red)">${s.totalLoss||0}</td><td style="text-align:center;font-size:12px;color:${(s.lossRatio||0)>30?'var(--red)':'var(--amber)'}">${s.lossRatio||0}%</td><td style="text-align:center">${s.zeros>0?`<span style="color:var(--red);font-weight:700">${s.zeros}</span>`:'<span style="color:var(--green)">0</span>'}</td><td style="text-align:center">${diff!==null?`<span style="font-weight:700;color:${diff>0?'#34C759':diff<0?'#FF3B30':'#6e6e73'}">${diff>0?'+':''}${diff}</span>`:'—'}</td><td style="text-align:center;font-weight:600">${s.csatVal}%</td><td style="text-align:center"><span class="badge ${cls.c}">${cls.l}</span></td></tr>`;
+  }).join('')||'<tr><td colspan="14" style="text-align:center;padding:2rem;color:var(--text2)">Sem dados</td></tr>';
+}
+
+let _opDetailAdminId=null;
+function openOpDetailAdmin(uid){
+  _opDetailAdminId=uid;_currentOpenOpUid=uid;
+  const u=users.find(x=>x.id===uid);if(!u)return;
+  renderOpDetailContent(uid,'gop-detail-content');
+  document.getElementById('gop-list').style.display='none';
+  document.getElementById('gop-detail').style.display='block';
+  navTo('gestor-operators');
+  document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
+  document.querySelector('[data-v="admin-ranking"]')?.classList.add('active');
+}
+
+function getSeniorTeams(){
+  // Returns teams managed by gestoras linked to this senior
+  const seniorId=currentUser.id;
+  const myGestoras=users.filter(u=>u.role==='gestor'&&u.seniorId===seniorId);
+  const myGestoraIds=myGestoras.map(u=>u.id);
+  return teams.filter(t=>myGestoraIds.includes(t.managerId));
+}
+function getSeniorGestoras(){
+  return users.filter(u=>u.role==='gestor'&&u.seniorId===currentUser.id);
+}
+function getSeniorData(month){
+  const tIds=getSeniorTeams().map(t=>t.id);
+  const myOps=users.filter(u=>u.role==='operador'&&tIds.includes(u.teamId)).map(u=>u.id);
+  const d=getMonthData(month);
+  return d.filter(r=>myOps.includes(r.agentId));
+}
+
+function renderSeniorOverview(){
+  const data=getSeniorData(currentMonth),total=data.length;
+  const avg=total?avgOf(data,'score'):0,csatAvg=csat(data);
+  const totalLoss=data.reduce((s,r)=>s+(r.loss||0),0),avgLoss=total?Math.round(totalLoss/total):0;
+  const myTeams=getSeniorTeams();
+  const gestores=[...new Set(myTeams.map(t=>t.managerId))].filter(Boolean);
+  document.getElementById('senior-ov-sub').textContent=(currentMonth==='__ALL__'?'Todos os Meses':currentMonth)+' · '+total+' monitorias';
+  kpi('senior-total',total||'—','','total no período');
+  kpi('senior-avg',avg,avg>=42?'c-green':'c-red','pontuação média');
+  kpi('senior-loss',totalLoss,'c-red','média −'+avgLoss+' por mon.');
+  kpi('senior-csat',csatAvg+'%',csatAvg>=80?'c-green':'c-amber','Média de Qualidade');
+  kpi('senior-gestores',gestores.length,'','gestoras ativas');
+  const tStats=myTeams.filter(t=>data.some(r=>r.teamId===t.id)).map(t=>{const td=data.filter(r=>r.teamId===t.id);return{name:t.name,avg:td.length?avgOf(td,'score'):0,maxScore:td[0]?.maxScore||60};});
+  const cMax=tStats.length?Math.max(...tStats.map(t=>t.maxScore),60):60;
+  mkChart('chart-senior-teams',{type:'bar',data:{labels:tStats.map(t=>t.name),datasets:[{data:tStats.map(t=>t.avg),backgroundColor:tStats.map(t=>scoreColor(t.avg,t.maxScore)+'99'),borderColor:tStats.map(t=>scoreColor(t.avg,t.maxScore)),borderWidth:1.5,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{min:0,max:cMax,ticks:{font:{size:10}},grid:{color:'#e0e0e522'}}}}});
+  const trendData=months.map(m=>{const d2=getSeniorData(m);return d2.length?avgOf(d2,'score'):null;});
+  mkChart('chart-senior-trend',{type:'line',data:{labels:months,datasets:[{data:trendData,borderColor:'#AF52DE',backgroundColor:'#AF52DE12',pointRadius:5,tension:0.3,fill:true,borderWidth:2.5,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{min:0,max:cMax,ticks:{font:{size:10}},grid:{color:'#e0e0e522'}}}}});
+  renderDist('senior-dist',data,total);
+  renderSeniorGestoras();
+  const opsAll=users.filter(u=>u.role==='operador'&&myTeams.some(t=>t.id===u.teamId));
+  const opStats=opsAll.map(u=>{const s=agentStats(currentMonth,u.id);return s?{...s,user:u}:null;}).filter(Boolean).sort((a,b)=>b.avg-a.avg).slice(0,5);
+  document.getElementById('senior-top5').innerHTML=opStats.length?opStats.map((s,i)=>{
+    const st=avStyle(s.user.name),cls=classify(s.avg,s.maxScore);
+    return`<div class="team-rank-item"><div class="trk-rank" style="color:${i<3?'#FF9500':'var(--text2)'}">${['🥇','🥈','🥉'][i]||i+1}</div><div class="av" style="width:30px;height:30px;background:${st.bg};color:${st.fg};font-size:11px">${initials(s.user.name)}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${s.user.name}</div><div style="font-size:11px;color:var(--text2)">${teams.find(t=>t.id===s.user.teamId)?.name||''}</div></div><span class="badge ${cls.c}">${s.avg} pts</span></div>`;
+  }).join(''):'<p style="color:var(--text2);font-size:13px">Sem dados</p>';
+}
+
+function renderSeniorGestoras(){
+  const el=document.getElementById('senior-gestoras-cards');if(!el)return;
+  const gestoras=getSeniorGestoras();
+  const data=getSeniorData(currentMonth);
+  el.innerHTML=gestoras.length?gestoras.map(g=>{
+    const team=teams.find(t=>t.managerId===g.id);
+    const td=team?data.filter(r=>r.teamId===team.id):[];
+    const avg=td.length?avgOf(td,'score'):0;
+    const ops=team?users.filter(u=>u.role==='operador'&&u.teamId===team.id):[];
+    const st=avStyle(g.name),cls=classify(avg,td[0]?.maxScore||60);
+    return`<div class="card" style="flex:1;min-width:200px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:.75rem">
+        <div class="av" style="width:36px;height:36px;background:${st.bg};color:${st.fg};font-size:13px">${initials(g.name)}</div>
+        <div>
+          <div style="font-size:13px;font-weight:700">${g.name}</div>
+          <div style="font-size:11px;color:var(--text2)">${team?.name||'Sem equipe'} · ${ops.length} op.</div>
+        </div>
+        <span class="badge ${cls.c}" style="margin-left:auto">${avg} pts</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div style="background:var(--bg2);border-radius:var(--r);padding:.5rem;text-align:center">
+          <div style="font-size:16px;font-weight:800;color:${scoreColor(avg,td[0]?.maxScore||60)}">${avg}</div>
+          <div style="font-size:10px;color:var(--text2)">Média pts</div>
+        </div>
+        <div style="background:var(--bg2);border-radius:var(--r);padding:.5rem;text-align:center">
+          <div style="font-size:16px;font-weight:800">${td.length}</div>
+          <div style="font-size:10px;color:var(--text2)">Monitorias</div>
+        </div>
+      </div>
+    </div>`;
+  }).join(''):'<p style="font-size:13px;color:var(--text2)">Nenhuma gestora vinculada ainda. Configure em Configurações.</p>';
+}
+
+function renderSeniorTeams(){
+  const data=getSeniorData(currentMonth);
+  document.getElementById('senior-teams-grid').innerHTML=getSeniorTeams().map(t=>{
+    const td=data.filter(r=>r.teamId===t.id),avg=td.length?avgOf(td,'score'):0,csatA=csat(td);
+    const mgr=users.find(u=>u.id===t.managerId),goal=getTeamGoal(t.id);
+    const ops=users.filter(u=>u.role==='operador'&&u.teamId===t.id);
+    const opStats=ops.map(u=>{const s=agentStats(currentMonth,u.id);return s?{...s,user:u}:null;}).filter(Boolean).sort((a,b)=>b.avg-a.avg);
+    const cls=classify(avg,td[0]?.maxScore||60);
+    return`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem"><div><div style="font-size:15px;font-weight:700">${t.name}</div><div style="font-size:12px;color:var(--text2)">Gestora: ${mgr?.name||'—'}</div></div><span class="badge ${cls.c}">${avg} pts</span></div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1rem"><div style="background:var(--bg2);border-radius:var(--r);padding:.65rem;text-align:center"><div style="font-size:18px;font-weight:700;color:${scoreColor(avg)}">${avg}</div><div style="font-size:10px;color:var(--text2)">Média pts</div></div><div style="background:var(--bg2);border-radius:var(--r);padding:.65rem;text-align:center"><div style="font-size:18px;font-weight:700;color:${csatA>=goal.csatGoal?'var(--green)':'var(--amber)'}">${csatA}%</div><div style="font-size:10px;color:var(--text2)">Qualidade</div></div><div style="background:var(--bg2);border-radius:var(--r);padding:.65rem;text-align:center"><div style="font-size:18px;font-weight:700">${td.length}</div><div style="font-size:10px;color:var(--text2)">Monitorias</div></div></div>${opStats.slice(0,5).map((s,i)=>{const st=avStyle(s.user.name);return`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openOpDetailAdmin('${s.user.id}')"><div style="font-size:12px;font-weight:700;width:20px;color:var(--text3)">${i+1}</div><div class="av" style="width:24px;height:24px;background:${st.bg};color:${st.fg};font-size:10px">${initials(s.user.name)}</div><div style="flex:1;font-size:12px">${s.user.name}</div><span style="font-size:12px;font-weight:700;color:${scoreColor(s.avg,s.maxScore)}">${s.avg}</span></div>`;}).join('')}</div>`;
+  }).join('');
+}
+
+function renderSeniorRanking(){
+  const q=(document.getElementById('senior-rank-search')||{value:''}).value.toLowerCase();
+  const myTeams=getSeniorTeams();
+  const ops=users.filter(u=>u.role==='operador'&&myTeams.some(t=>t.id===u.teamId)).filter(u=>!q||u.name.toLowerCase().includes(q));
+  const opRows=ops.map(u=>{const s=agentStats(currentMonth,u.id);if(!s)return{user:u,count:0,avg:0,zeros:0,csatVal:0,maxScore:60};return{user:u,...s};}).sort((a,b)=>b.avg-a.avg);
+  const medals=['🥇','🥈','🥉'];
+  document.getElementById('senior-rank-tbody').innerHTML=opRows.map((s,i)=>{
+    const st=avStyle(s.user.name),cls=classify(s.avg,s.maxScore),sc2=scoreColor(s.avg,s.maxScore);
+    const team=teams.find(t=>t.id===s.user.teamId),mgr=users.find(u=>u.id===team?.managerId);
+    const mx=s.maxScore||60;
+    return`<tr><td style="font-weight:800;font-size:${i<3?'16':'12'}px;color:${i<3?'#FF9500':'var(--text2)'}">${medals[i]||i+1}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:28px;height:28px;background:${st.bg};color:${st.fg};font-size:10px">${initials(s.user.name)}</div><span>${s.user.name}</span></div></td><td style="font-size:11px;color:var(--text2)">${team?.name||'—'}</td><td style="font-size:11px;color:var(--text2)">${mgr?.name||'—'}</td><td style="text-align:center;color:var(--text2);font-size:12px">${s.count}</td><td style="text-align:center;font-weight:800;color:${sc2};font-size:16px">${s.avg}<span style="font-size:10px;font-weight:400;color:var(--text3)">/${mx}</span></td><td><div class="sbar-w"><div class="sbar" style="width:${pct(s.avg,mx)}%;background:${sc2}"></div></div></td><td style="text-align:center;font-weight:600">${s.csatVal||0}%</td><td style="text-align:center"><span class="badge ${cls.c}">${cls.l}</span></td></tr>`;
+  }).join('')||'<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text2)">Sem dados</td></tr>';
+}
+
+function renderGestorOverview(){
+  const team=teams.find(t=>t.id===currentUser.teamId);
+  const data=filtered(currentMonth),total=data.length;
+  const avg=total?avgOf(data,'score'):0,csatAvg=csat(data);
+  const zeros=data.filter(r=>r.score===0).length,goal=getTeamGoal(currentUser.teamId);
+  const prevM=months[months.indexOf(currentMonth)-1];
+  const prevData=prevM?filtered(prevM):[];
+  const delta=prevData.length?avg-avgOf(prevData,'score'):null;
+  document.getElementById('gestor-panel-title').textContent=(team?.name||'Equipe')+' — Painel';
+  document.getElementById('gestor-panel-sub').textContent=(currentMonth==='__ALL__'?'Todos os Meses':currentMonth)+' · '+total+' monitorias · Meta: '+goal.minScore+' pts';
+  const totalLossG=data.reduce((s,r)=>s+(r.loss||0),0);
+  const avgLossG=total?Math.round(totalLossG/total):0;
+  kpi('gv-total',total||'—','','monitorias');
+  kpi('gv-avg',avg,avg>=goal.minScore?'c-green':'c-red',delta!==null?`${delta>0?'↑ +':'↓ '}${delta} vs ant.`:'');
+  kpi('gv-totloss',totalLossG,'c-red','média −'+avgLossG);
+  kpi('gv-csat',csatAvg+'%',csatAvg>=goal.csatGoal?'c-green':'c-amber','Meta: '+goal.csatGoal+'%');
+  kpi('gv-zeros',zeros,'c-red',zeros===0?'Nenhuma ✓':'zeradas');
+  const ops=users.filter(u=>u.role==='operador'&&u.teamId===currentUser.teamId);
+  const ranked=ops.map(u=>{const s=agentStats(currentMonth,u.id);return s?{...s,user:u}:null;}).filter(Boolean).sort((a,b)=>(a.totalLoss||0)-(b.totalLoss||0));
+  document.getElementById('gestor-team-rank').innerHTML=ranked.length?ranked.map((s,i)=>{
+    const st=avStyle(s.user.name),cls=classify(s.avg,s.maxScore);
+    return`<div class="team-rank-item" style="cursor:pointer" onclick="openGestorOp('${s.user.id}')"><div class="trk-rank" style="color:${i<3?'#FF9500':'var(--text2)'}">${['🥇','🥈','🥉'][i]||i+1}</div><div class="av" style="width:28px;height:28px;background:${st.bg};color:${st.fg};font-size:10px">${initials(s.user.name)}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${s.user.name}</div><div style="font-size:11px;color:var(--text2)">${s.count} mon. · média ${s.avg} pts</div></div><div style="text-align:right"><div style="font-size:13px;font-weight:800;color:var(--red)">−${s.totalLoss||0}</div><div style="font-size:10px;color:var(--text2)">pts perdidos</div></div></div>`;
+  }).join(''):'<p style="color:var(--text2);font-size:13px">Sem dados</p>';
+  const trendD=months.map(m=>{const d2=filtered(m);if(!d2.length)return null;return Math.round(d2.reduce((s,r)=>s+(r.loss||0),0)/d2.length);});
+  mkChart('chart-gv-trend',{type:'line',data:{labels:months,datasets:[{data:trendD,label:'Perda média/mon.',borderColor:'#FF3B30',backgroundColor:'#FF3B3012',pointRadius:5,tension:0.3,fill:true,borderWidth:2.5,spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{ticks:{font:{size:10}},grid:{color:'#e0e0e522'}}}}});
+  renderDist('gv-dist',data,total);
+  const lossEl=document.getElementById('gestor-loss-by-op');
+  if(lossEl&&ranked.length){
+    const maxLoss=Math.max(...ranked.map(s=>s.totalLoss||0),1);
+    lossEl.innerHTML=ranked.map(s=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><div style="font-size:12px;width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.user.name.split(' ')[0]}</div><div style="flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct(s.totalLoss||0,maxLoss)}%;background:${(s.lossRatio||0)>30?'var(--red)':'var(--amber)'};border-radius:4px"></div></div><div style="font-size:12px;font-weight:700;color:var(--red);width:32px;text-align:right">−${s.totalLoss||0}</div></div>`).join('');
+  }
+  const achieved=total?pct(data.filter(r=>r.score>=goal.minScore).length,total):0;
+  document.getElementById('gestor-goal-display').innerHTML=`<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Meta mínima</span><strong>${goal.minScore} pts</strong></div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Meta de Qualidade</span><strong>${goal.csatGoal}%</strong></div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:12px"><span>Atingiram a meta</span><strong style="color:${achieved>=70?'var(--green)':'var(--amber)'}">${achieved}%</strong></div></div><div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;width:${achieved}%;background:${achieved>=70?'var(--green)':'var(--amber)'};border-radius:3px;transition:width .4s"></div></div><div style="font-size:11px;color:var(--text2);margin-top:6px">${achieved}% da equipe atingiu a meta</div>`;
+}
+
+function renderGestorOperators(){
+  const detailPanel=document.getElementById('gop-detail');
+  if(detailPanel&&detailPanel.style.display!=='none'&&_currentOpenOpUid){renderOpDetailContent(_currentOpenOpUid,'gop-detail-content');return;}
+  const q=(document.getElementById('gop-search')||{value:''}).value.toLowerCase();
+  const ops=users.filter(u=>u.role==='operador'&&u.teamId===currentUser.teamId).filter(u=>!q||u.name.toLowerCase().includes(q));
+  document.getElementById('gop-grid').innerHTML=ops.map(u=>{
+    const st=avStyle(u.name),avgs=months.map(m=>{const s=agentStats(m,u.id);return s?s.avg:null;});
+    const valid=avgs.filter(v=>v!==null),last=valid[valid.length-1]??0;
+    const trend=valid.length>=2?last-valid[valid.length-2]:null,cls=classify(last);
+    return`<div class="cc" onclick="openGestorOp('${u.id}')"><div style="display:flex;align-items:center;gap:9px;margin-bottom:.75rem"><div class="av" style="width:36px;height:36px;background:${st.bg};color:${st.fg};font-size:13px">${initials(u.name)}</div><div><div style="font-size:12px;font-weight:700;line-height:1.3">${u.name}</div><span class="badge ${cls.c}" style="margin-top:2px">${cls.l}</span></div></div><div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:7px"><div><div style="font-size:10px;color:var(--text2)">Última média</div><div style="font-size:20px;font-weight:800;color:${scoreColor(last)}">${last}</div></div>${trend!==null?`<div style="font-size:12px;font-weight:700;color:${trend>0?'#34C759':trend<0?'#FF3B30':'#6e6e73'}">${trend>0?'↑ +':'↓ '}${trend}</div>`:''}</div>${(()=>{const lastMon=months.slice().reverse().flatMap(m=>(records[m]||[]).filter(r=>r.agentId===u.id&&r.perfil)).slice(0,1)[0];if(!lastMon)return'';const perfis=Array.isArray(lastMon.perfil)?lastMon.perfil:[lastMon.perfil];const nv=lastMon.nivel?NIVEIS[lastMon.nivel]:null;return`<div style="margin-bottom:6px;display:flex;flex-wrap:wrap;gap:3px">${perfis.map(pid=>{const p=PERFIS[pid];return p?`<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;border:1px solid ${nv?nv.border:'var(--border)'};background:${nv?nv.bg:'var(--bg2)'};color:${nv?nv.color:'var(--text2)'}">${p.icon} ${p.label}</span>`:''}).join('')}${nv?`<span style="font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid ${nv.border};background:${nv.bg};color:${nv.color}">${nv.label}</span>`:''}</div>`;})()}<div style="display:flex;gap:2px">${months.slice(-6).map((m,i)=>{const v=avgs[months.length-6+i];return`<div style="flex:1;height:4px;border-radius:2px;background:${v===null?'var(--border)':scoreColor(v)};opacity:${v===null?.3:1}"></div>`;}).join('')}</div></div>`;
+  }).join('');
+}
+
+let _currentOpenOpUid=null;
+function openGestorOp(uid){
+  _currentOpenOpUid=uid;
+  renderOpDetailContent(uid,'gop-detail-content');
+  document.getElementById('gop-list').style.display='none';
+  document.getElementById('gop-detail').style.display='block';
+}
+function closeOpDetail(){
+  _currentOpenOpUid=null;
+  document.getElementById('gop-list').style.display='block';
+  document.getElementById('gop-detail').style.display='none';
+  renderGestorOperators();
+}
+
+let _currentDetailName='';
+function renderOpDetailContent(uid,containerId){
+  const u=users.find(x=>x.id===uid);if(!u)return;
+  _currentDetailName=u.name;
+  const st=avStyle(u.name),team=teams.find(t=>t.id===u.teamId),goal=getTeamGoal(u.teamId);
+  const allRows=months.flatMap(m=>opData(m,uid).map(r=>({...r,month:m})));
+  const isAll=currentMonth==='__ALL__';
+  const filteredRows=isAll?allRows:allRows.filter(r=>r.month===currentMonth);
+  const monthLabel=isAll?'Todos os Meses':currentMonth;
+  const dispAvg=filteredRows.length?Math.round(filteredRows.reduce((s,r)=>s+r.score,0)/filteredRows.length):0;
+  const dispLoss=filteredRows.length?Math.round(filteredRows.reduce((s,r)=>s+r.loss,0)/filteredRows.length):0;
+  const dispCsat=csat(filteredRows),dispZeros=filteredRows.filter(r=>r.score===0).length;
+  const dispTotal=filteredRows.length,dispTotalLoss=filteredRows.reduce((s,r)=>s+(r.loss||0),0);
+  const overallAvg=allRows.length?Math.round(allRows.reduce((s,r)=>s+r.score,0)/allRows.length):0;
+  const cls=classify(dispAvg||overallAvg);
+  const avgs=months.map(m=>{const s=agentStats(m,uid);return s?s.avg:null;});
+  const losses=months.map(m=>{const s=agentStats(m,uid);return s?s.avgLoss:null;});
+  const failCount={};
+  filteredRows.flatMap(r=>[...r.failedQ,...r.failedC]).forEach(f=>{failCount[f]=(failCount[f]||0)+1;});
+  const topFails=Object.entries(failCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const el=document.getElementById(containerId);
+  el.innerHTML=`<div class="op-hero"><div class="av" style="width:56px;height:56px;background:${st.bg};color:${st.fg};font-size:18px;flex-shrink:0">${initials(u.name)}</div><div style="flex:1"><div style="font-size:18px;font-weight:800;color:#fff">${u.name}</div><div style="font-size:12px;color:rgba(255,255,255,.5)">${team?.name||''}</div><div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap"><span class="badge ${cls.c}">${cls.l}</span><span style="font-size:11px;color:rgba(255,255,255,.4);align-self:center">${monthLabel}</span>${(()=>{const pc={};filteredRows.forEach(r=>{if(r.perfil){const arr=Array.isArray(r.perfil)?r.perfil:[r.perfil];arr.forEach(pid=>{pc[pid]=(pc[pid]||0)+1;});}});const top=Object.entries(pc).sort((a,b)=>b[1]-a[1])[0];if(!top)return'';const p=PERFIS[top[0]];const lastNv=filteredRows.slice().reverse().find(r=>r.nivel);const nv=lastNv?NIVEIS[lastNv.nivel]:null;if(!p)return'';return`<span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;background:rgba(255,255,255,.12);color:#fff;align-self:center;border:1px solid rgba(255,255,255,.2)">${p.icon} ${p.label}</span>${nv?`<span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;background:rgba(255,255,255,.08);color:${nv.color};align-self:center;border:1px solid ${nv.border}">${nv.label}</span>`:''}`;})()}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:34px;font-weight:800;color:${dispTotal>0?scoreColor(dispAvg):scoreColor(overallAvg)}">${dispTotal>0?dispAvg:overallAvg}</div><div style="font-size:11px;color:rgba(255,255,255,.4)">${dispTotal>0?monthLabel+' · 60 pts':'média geral'}</div><div style="font-size:13px;font-weight:700;color:var(--red);margin-top:3px">−${dispTotalLoss} pts perdidos</div></div></div>${(()=>{const perfisCount={};filteredRows.forEach(r=>{if(r.perfil){const arr=Array.isArray(r.perfil)?r.perfil:[r.perfil];arr.forEach(pid=>{perfisCount[pid]=(perfisCount[pid]||0)+1;});}});const lastNivel=filteredRows.slice().reverse().find(r=>r.nivel);const nv=lastNivel?NIVEIS[lastNivel.nivel]:null;const sorted=Object.entries(perfisCount).sort((a,b)=>b[1]-a[1]);if(!sorted.length)return'';return`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-radius:var(--r);margin-bottom:12px;border:1px solid ${nv?nv.border:'var(--border)'};background:${nv?nv.bg:'var(--bg2)'}"><div style="display:flex;gap:6px;flex-wrap:wrap;flex:1">${sorted.slice(0,3).map(([pid,cnt])=>{const p=PERFIS[pid];return p?`<span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.5);color:${nv?nv.color:'var(--text)'}">${p.icon} ${p.label} <span style="font-size:10px;opacity:.7">${cnt}x</span></span>`:''}).join('')}</div>${nv?`<span style="font-size:12px;font-weight:700;color:${nv.color}">${nv.label}</span>`:''}<div style="width:100%;font-size:11px;color:var(--text2);margin-top:2px">${sorted.slice(0,1).map(([pid])=>PERFIS[pid]?.desc.slice(0,2).join(' • ')||'').join('')}</div></div>`;})()}
+<div class="kpi-grid" style="margin-bottom:1.1rem"><div class="kpi" style="--kpi-color:var(--blue)"><div class="kpi-label">Monitorias</div><div class="kpi-val">${dispTotal}</div><div class="kpi-sub">${monthLabel}</div></div><div class="kpi" style="--kpi-color:var(--red)"><div class="kpi-label">Perda média/mon.</div><div class="kpi-val c-red">−${dispLoss}</div><div class="kpi-sub">pts perdidos</div></div><div class="kpi" style="--kpi-color:var(--amber)"><div class="kpi-label">Média de Qualidade</div><div class="kpi-val" style="color:${dispCsat>=goal.csatGoal?'var(--green)':'var(--amber)'}">${dispCsat}%</div><div class="kpi-sub">Meta: ${goal.csatGoal}%</div></div><div class="kpi" style="--kpi-color:var(--red)"><div class="kpi-label">Zeradas</div><div class="kpi-val c-red">${dispZeros}</div><div class="kpi-sub">${monthLabel}</div></div></div><div class="card" style="margin-bottom:12px"><div class="card-hd"><span class="card-title">Evolução Mensal</span></div><div class="month-cmp">${months.map((m,i)=>{const v=avgs[i],l=losses[i],prev=i>0?avgs[i-1]:null,delta2=v!==null&&prev!==null?v-prev:null,isCur=m===currentMonth&&!isAll;return`<div class="mc ${isCur?'curr':''}">${isCur?'<div class="mc-tag">atual</div>':''}<div style="font-size:10px;color:var(--text2)">${m}</div><div style="font-size:20px;font-weight:800;color:${v!==null?scoreColor(v):'var(--text3)'}">${v!==null?v:'—'}</div>${l!==null?`<div style="font-size:11px;font-weight:700;color:var(--red)">−${l}</div>`:''}${delta2!==null?`<div style="font-size:11px;font-weight:700;color:${delta2>0?'#34C759':delta2<0?'#FF3B30':'#6e6e73'}">${delta2>0?'↑ +':'↓ '}${delta2}</div>`:''}</div>`;}).join('')}</div><div style="position:relative;height:180px"><canvas id="chart-op-det-${uid}"></canvas></div></div><div class="card" style="margin-bottom:12px"><div class="card-hd"><span class="card-title">Últimas Monitorias</span></div><div class="tw"><table class="tbl"><thead><tr><th>Data</th><th>Protocolo</th><th style="text-align:center">Pontuação</th><th style="text-align:center">Pts Perdidos</th><th style="text-align:center">Status</th><th>Observação</th></tr></thead><tbody>${[...filteredRows].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12).map(r=>{const cls2=classify(r.score,r.maxScore);return`<tr><td style="font-size:11px;color:var(--text2);white-space:nowrap">${r.date?r.date.slice(8)+'/'+r.date.slice(5,7):'—'}</td><td style="font-family:monospace;font-size:12px;font-weight:600">${r.proto||'—'}</td><td style="text-align:center;font-weight:800;font-size:14px;color:${scoreColor(r.score,r.maxScore)}">${r.score}<span style="font-size:10px;font-weight:400;color:var(--text3)">/${r.maxScore||60}</span></td><td style="text-align:center;font-weight:800;color:var(--red)">−${r.loss}</td><td style="text-align:center"><span class="badge ${cls2.c}">${cls2.l}</span></td><td style="font-size:11px;color:var(--text2);max-width:200px;line-height:1.4">${r.obs&&r.obs.trim()?r.obs:'<span style="color:var(--text3)">—</span>'}</td></tr>`;}).join('')}</tbody></table>
+<div style="display:flex;gap:16px;justify-content:flex-end;padding:10px 4px 2px;border-top:2px solid var(--border);margin-top:4px">
+  <div style="font-size:12px;color:var(--text2)">Total de monitorias: <strong style="color:var(--text)">${filteredRows.length}</strong></div>
+  <div style="font-size:12px;color:var(--text2)">Pontuação total: <strong style="color:${scoreColor(filteredRows.reduce((s,r)=>s+r.score,0)/Math.max(filteredRows.length,1),filteredRows[0]?.maxScore||60)}">${filteredRows.reduce((s,r)=>s+r.score,0)}</strong></div>
+  <div style="font-size:12px;color:var(--text2)">Pts perdidos total: <strong style="color:var(--red)">−${filteredRows.reduce((s,r)=>s+(r.loss||0),0)}</strong></div>
+</div>
+</div></div><div class="card"><div class="card-hd"><span class="card-title">Pendências Frequentes</span></div>${topFails.length?topFails.map(([l2,cnt])=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:var(--r);background:var(--bg2);margin-bottom:6px"><span style="font-size:16px;font-weight:800;color:var(--red);width:28px;text-align:center">${cnt}x</span><span style="font-size:12px;line-height:1.45">${l2}</span></div>`).join(''):'<p style="color:var(--text2);font-size:13px">Nenhuma pendência ✓</p>'}</div>`;
+  setTimeout(()=>{mkChart(`chart-op-det-${uid}`,{type:'line',data:{labels:months,datasets:[{label:'Pontuação',data:avgs,borderColor:'#00cc44',backgroundColor:'#00cc4412',pointRadius:5,tension:.3,fill:true,borderWidth:2.5,spanGaps:true},{label:'Pts perdidos',data:losses.map(v=>v!==null?-v:null),borderColor:'#FF3B30',backgroundColor:'#FF3B3010',pointRadius:4,tension:.3,fill:false,borderWidth:1.5,borderDash:[4,3],spanGaps:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{ticks:{font:{size:10}},grid:{color:'#e0e0e522'}}}}});},50);
+}
+
+function renderPerfilTable(){
+  const filterPerfil=document.getElementById('compare-perfil-filter')?.value||'';
+  const filterNivel=document.getElementById('compare-nivel-filter')?.value||'';
+  const ops=users.filter(u=>u.role==='operador'&&u.teamId===currentUser.teamId);
+  // Get latest perfil/nivel for each operator from all months
+  const opPerfis=ops.map(u=>{
+    const allRows=months.flatMap(m=>(records[m]||[]).filter(r=>r.agentId===u.id&&r.perfil)).reverse();
+    const lastRow=allRows[0];
+    const perfis=lastRow?(Array.isArray(lastRow.perfil)?lastRow.perfil:[lastRow.perfil]):[];
+    const nivel=lastRow?.nivel||null;
+    return{user:u,perfis,nivel,lastRow};
+  });
+  // Apply filters
+  const filtered2=opPerfis.filter(op=>{
+    if(filterPerfil&&!op.perfis.includes(filterPerfil))return false;
+    if(filterNivel&&op.nivel!==filterNivel)return false;
+    return true;
+  });
+  const el=document.getElementById('compare-perfil-table');if(!el)return;
+  if(!filtered2.length){el.innerHTML='<p style="font-size:13px;color:var(--text2);padding:8px 0">Nenhum colaborador encontrado com os filtros selecionados.</p>';return;}
+  const st2=avStyle;
+  el.innerHTML=`<table class="tbl"><thead><tr><th>Colaborador</th><th>Perfis Identificados</th><th>Nível</th><th style="text-align:center">Últ. Pontuação</th><th style="text-align:center">Monitorias</th></tr></thead><tbody>${filtered2.map(op=>{
+    const s=agentStats(currentMonth,op.user.id);
+    const st=avStyle(op.user.name);
+    const nv=op.nivel?NIVEIS[op.nivel]:null;
+    const perfisHtml=op.perfis.length?op.perfis.map(pid=>{const p=PERFIS[pid];return p?`<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;border:1px solid ${nv?nv.border:'var(--border)'};background:${nv?nv.bg:'var(--bg2)'};color:${nv?nv.color:'var(--text2)'}">${p.icon} ${p.label}</span>`:''}).join(' '):'<span style="color:var(--text3);font-size:11px">—</span>';
+    return`<tr>
+      <td><div style="display:flex;align-items:center;gap:8px"><div class="av" style="width:28px;height:28px;background:${st.bg};color:${st.fg};font-size:10px">${initials(op.user.name)}</div><span style="font-weight:600;font-size:13px">${op.user.name}</span></div></td>
+      <td><div style="display:flex;gap:4px;flex-wrap:wrap">${perfisHtml}</div></td>
+      <td>${nv?`<span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid ${nv.border};background:${nv.bg};color:${nv.color}">${nv.label}</span>`:'<span style="color:var(--text3);font-size:11px">—</span>'}</td>
+      <td style="text-align:center;font-weight:800;font-size:15px;color:${s?scoreColor(s.avg,s.maxScore):'var(--text3)'}">${s?s.avg:'—'}</td>
+      <td style="text-align:center;color:var(--text2);font-size:12px">${s?s.count:'0'}</td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+function renderGestorCompare(){
+  const ops=users.filter(u=>u.role==='operador'&&u.teamId===currentUser.teamId);
+  const colors=['#34C759','#007AFF','#FF9500','#AF52DE','#FF3B30','#5AC8FA'];
+  const datasets=ops.map((u,i)=>{
+    const avgs=months.map(m=>{const s=agentStats(m,u.id);return s?s.avg:null;});
+    return{label:u.name.split(' ')[0],data:avgs,borderColor:colors[i%colors.length],backgroundColor:colors[i%colors.length]+'22',pointRadius:4,tension:.3,fill:false,borderWidth:2,spanGaps:true};
+  });
+  mkChart('chart-compare',{type:'line',data:{labels:months,datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{min:0,max:60,ticks:{font:{size:10}},grid:{color:'#e0e0e522'}}}}});
+  const thead=document.getElementById('compare-thead'),tbody=document.getElementById('compare-tbody');
+  thead.innerHTML='<th>Operador</th>'+months.map(m=>`<th style="text-align:center">${m.slice(0,3)}</th>`).join('')+'<th style="text-align:center">Média</th>';
+  tbody.innerHTML=ops.map(u=>{
+    const avgs=months.map(m=>{const s=agentStats(m,u.id);return s?s.avg:null;});
+    const valid=avgs.filter(v=>v!==null);
+    const overall=valid.length?Math.round(valid.reduce((a,b)=>a+b,0)/valid.length):0;
+    return`<tr><td style="font-weight:600;font-size:13px">${u.name}</td>${avgs.map(v=>v!==null?`<td style="text-align:center;font-weight:700;color:${scoreColor(v)}">${v}</td>`:'<td style="text-align:center;color:var(--text3)">—</td>').join('')}<td style="text-align:center;font-weight:800;color:${scoreColor(overall)}">${overall}</td></tr>`;
+  }).join('');
+  renderPerfilTable();
+}
+
+function renderGestorTeamUsers(){
+  const team=teams.find(t=>t.id===currentUser.teamId);
+  const ops=users.filter(u=>u.role==='operador'&&u.teamId===currentUser.teamId);
+  const listEl=document.getElementById('gestor-agents-list');
+  if(!listEl)return;
+  function renderRow(u){return`<tr style="border-bottom:1px solid var(--border)"><td style="padding:7px 10px;font-size:13px;font-weight:600">${u.name}</td><td style="padding:7px 10px;font-size:11px;color:var(--text2)">${u.email||'<span style="color:var(--red)">sem e-mail</span>'}</td><td style="padding:7px 10px"><span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;${u.passwordSet===false?'background:rgba(255,179,0,.15);color:#FF9500':'background:rgba(0,204,68,.12);color:#00993a'}">${u.passwordSet===false?'⏳ Pendente':'✓ Ativo'}</span></td><td style="padding:7px 10px;white-space:nowrap"><button onclick="gestorResendInvite('${u.id}')" style="font-size:11px;color:var(--ig-green);background:none;border:none;cursor:pointer;margin-right:8px">✏️ Senha</button></td></tr>`;}
+  listEl.innerHTML=ops.length?`<table style="width:100%;border-collapse:collapse;margin-bottom:4px"><thead><tr style="background:var(--bg2)"><th style="padding:6px 10px;font-size:10px;color:var(--text2);text-align:left;font-weight:700;text-transform:uppercase">Nome</th><th style="padding:6px 10px;font-size:10px;color:var(--text2);text-align:left;font-weight:700;text-transform:uppercase">E-mail</th><th style="padding:6px 10px;font-size:10px;color:var(--text2);text-align:left;font-weight:700;text-transform:uppercase">Status</th><th style="padding:6px 10px;font-size:10px;color:var(--text2);text-align:left;font-weight:700;text-transform:uppercase">Ações</th></tr></thead><tbody>${ops.map(renderRow).join('')}</tbody></table>`:'<p style="font-size:12px;color:var(--text2);margin-bottom:8px">Nenhum operador na equipe ainda.</p>';
+}
+
+async function gestorAddAgent(){
+  const n=document.getElementById('gestor-new-agent')?.value.trim();
+  const email=document.getElementById('gestor-new-agent-email')?.value.trim();
+  if(!n){alert('Informe o nome do operador.');return;}
+  if(!email||!email.includes('@')){alert('Informe um e-mail válido.');return;}
+  if(users.find(u=>u.email&&u.email.toLowerCase()===email.toLowerCase())){alert('E-mail já cadastrado.');return;}
+  document.getElementById('gestor-new-agent').value='';
+  document.getElementById('gestor-new-agent-email').value='';
+  const teamId=currentUser.teamId;
+  cfgOpenSetPassword({id:'op'+Date.now(),name:n,role:'operador',teamId,password:'',email,passwordSet:false});
+}
+
+function gestorResendInvite(userId){
+  resendInvite(userId);
+}
+
+function renderGestorSettings(){
+  const goal=getTeamGoal(currentUser.teamId);
+  const crit=getTeamCriteria(currentUser.teamId);
+  const e1=document.getElementById('team-goal-input'),e2=document.getElementById('team-csat-goal'),e3=document.getElementById('team-mon-goal'),e4=document.getElementById('team-monthly-max');
+  if(e1)e1.value=goal.minScore;if(e2)e2.value=goal.csatGoal;
+  if(e3){e3.value=goal.monPerOp||8;e3.oninput=()=>{if(e4)e4.value=(crit.maxScore||60)*(parseInt(e3.value)||8)+' pts';};}
+  if(e4)e4.value=(crit.maxScore||60)*(goal.monPerOp||8)+' pts';
+}
+function saveTeamGoals(){
+  const all=getGoals();
+  const monPerOp=parseInt(document.getElementById('team-mon-goal').value)||8;
+  all[currentUser.teamId]={minScore:parseInt(document.getElementById('team-goal-input').value)||36,csatGoal:parseInt(document.getElementById('team-csat-goal').value)||80,monGoal:monPerOp,monPerOp};
+  ss(K.GOALS,all);
+  const saved=document.getElementById('team-goal-saved');
+  if(saved){saved.style.display='block';setTimeout(()=>saved.style.display='none',2500);}
+}
+
+function renderOpDashboard(){
+  const uid=currentUser.id,data=opData(currentMonth,uid),total=data.length;
+  const avgLoss=total?avgOf(data,'loss'):0,csatAvg=csat(data),avgScore=total?avgOf(data,'score'):0;
+  const goal=getTeamGoal(currentUser.teamId);
+  const monthLabel=currentMonth==='__ALL__'?'Todos os Meses':currentMonth;
+  document.getElementById('op-title').textContent='Meu Desempenho — '+currentUser.name.split(' ')[0];
+  document.getElementById('op-sub').textContent=monthLabel+' · '+total+' monitoria'+(total!==1?'s':'');
+  const totalLossOp=data.reduce((s,r)=>s+(r.loss||0),0);
+  kpi('op-total',total||'—','','monitorias');kpi('op-loss',total?'−'+avgLoss:'—','c-red','média/mon.');
+  kpi('op-total-loss',total?'−'+totalLossOp:'—','c-red','total perdido');
+  kpi('op-csat',total?csatAvg+'%':'—',csatAvg>=goal.csatGoal?'c-green':'c-amber','Meta: '+goal.csatGoal+'%');
+  kpi('op-goal',goal.minScore,'','pts mínimos/mon.');
+  document.getElementById('op-loss-list').innerHTML=data.length?[...data].sort((a,b)=>b.loss-a.loss).slice(0,6).map(r=>`<div class="loss-item"><div class="loss-item-label"><span style="font-size:11px;color:var(--text2)">${r.date.slice(8)+'/'+r.date.slice(5,7)}</span> · ${r.proto}</div><div class="loss-item-pts">−${r.loss}</div></div>`).join(''):'<p style="color:var(--text2);font-size:13px">Nenhuma monitoria</p>';
+  const fc={};[...data.flatMap(r=>[...r.failedQ,...r.failedC])].forEach(f=>{fc[f]=(fc[f]||0)+1;});
+  const topFails=Object.entries(fc).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  document.getElementById('op-fails').innerHTML=topFails.length?topFails.map(([l,c])=>`<div style="display:flex;gap:10px;padding:8px 10px;background:var(--bg2);border-radius:var(--r);margin-bottom:6px"><span style="font-weight:800;color:var(--red);width:28px;text-align:center">${c}x</span><span style="font-size:12px">${l}</span></div>`).join(''):'<p style="color:var(--text2);font-size:13px">Nenhuma pendência ✓</p>';
+}
+
+function renderOpHistory(){
+  const uid=currentUser.id,isAll=currentMonth==='__ALL__';
+  const allRows=(isAll?months.flatMap(m=>opData(m,uid).map(r=>({...r,month:m}))):opData(currentMonth,uid).map(r=>({...r,month:currentMonth}))).sort((a,b)=>b.date.localeCompare(a.date));
+  const tbody=document.getElementById('op-history-tbody');
+  tbody.innerHTML=allRows.map(r=>{
+    const cls=classify(r.score,r.maxScore);
+    const failedQ=r.failedQ||[];
+    const failedC=r.failedC||[];
+    const criterios=[
+      ...failedQ.map(l=>`<span class="badge bg-amber" style="margin:1px;font-size:10px">${l.slice(0,30)}${l.length>30?'…':''}</span>`),
+      ...failedC.map(l=>`<span class="badge bg-red" style="margin:1px;font-size:10px">⛔ ${l.slice(0,28)}${l.length>28?'…':''}</span>`)
+    ];
+    const obsText=r.obs&&r.obs.trim()?`<span style="font-size:12px;color:var(--text)">${r.obs}</span>`:`<span style="color:var(--text3);font-size:12px">—</span>`;
+    return`<tr>
+      <td style="font-size:12px;color:var(--text2);white-space:nowrap">${r.date.slice(8)+'/'+r.date.slice(5,7)}</td>
+      <td style="font-size:11px;color:var(--text2)">${r.month}</td>
+      <td style="font-family:monospace;font-size:12px;font-weight:600">${r.proto||'—'}</td>
+      <td style="text-align:center;font-weight:800;color:${scoreColor(r.score,r.maxScore)}">${r.score}<span style="font-size:10px;font-weight:400;color:var(--text3)">/${r.maxScore||60}</span></td>
+      <td style="text-align:center;font-weight:800;color:var(--red)">−${r.loss}</td>
+      <td>${obsText}</td>
+      <td style="text-align:center"><span class="badge ${cls.c}">${cls.l}</span></td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text2)">Nenhuma monitoria</td></tr>';
+}
+
+function renderOpEvolution(){
+  const uid=currentUser.id;
+  const avgs=months.map(m=>{const s=agentStats(m,uid);return s?s.avg:null;});
+  const losses=months.map(m=>{const s=agentStats(m,uid);return s?s.avgLoss:null;});
+  const goal=getTeamGoal(currentUser.teamId);
+  mkChart('chart-op-evo',{type:'line',data:{labels:months,datasets:[{label:'Pontuação',data:avgs,borderColor:'#34C759',backgroundColor:'#34C75912',pointRadius:6,tension:.3,fill:true,borderWidth:2.5,spanGaps:true},{label:'Meta ('+goal.minScore+' pts)',data:months.map(()=>goal.minScore),borderColor:'#FF9500',borderDash:[6,4],pointRadius:0,fill:false,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{min:0,max:60,ticks:{font:{size:10}},grid:{color:'#e0e0e522'}}}}});
+  document.getElementById('op-evo-months').innerHTML=months.map((m,i)=>{
+    const v=avgs[i],l=losses[i],prevV=i>0?avgs[i-1]:null,delta=v!==null&&prevV!==null?v-prevV:null,isCur=m===currentMonth;
+    return`<div style="background:${isCur?'var(--gdim)':'var(--bg)'};border:1px solid ${isCur?'var(--green)':'var(--border)'};border-radius:var(--rl);padding:.9rem 1rem;position:relative">${isCur?'<span class="mc-tag">atual</span>':''}<div style="font-size:10px;color:var(--text2);margin-bottom:4px">${m}</div><div style="font-size:22px;font-weight:800;color:${v!==null?scoreColor(v):'var(--text3)'}">${v!==null?v:'—'}</div>${l!==null?`<div style="font-size:12px;font-weight:700;color:var(--red)">−${l}</div>`:''} ${delta!==null?`<div style="font-size:11px;font-weight:700;margin-top:4px;color:${delta>0?'#34C759':delta<0?'#FF3B30':'#6e6e73'}">${delta>0?'↑ +':'↓ '}${delta} pts</div>`:''}</div>`;
+  }).join('');
+}
+
+function renderRecords(){
+  selectedRecords.clear();
+  updateBatchBar();
+  let data=getMonthData(currentMonth);
+  if(currentUser.role==='gestor')data=data.filter(r=>r.teamId===currentUser.teamId);
+  data=[...data].sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('rec-sub').textContent=(currentMonth==='__ALL__'?'Todos os Meses':currentMonth)+' · '+data.length+' registros';
+  const allCkEl=document.getElementById('rec-check-all');
+  if(allCkEl)allCkEl.checked=false;
+  const tbody=document.getElementById('rec-tbody');
+  tbody.innerHTML=data.map(r=>{
+    const cls=classify(r.score,r.maxScore),sc2=scoreColor(r.score,r.maxScore);
+    const pend=[...r.failedQ,...r.failedC];
+    const month=findRecordMonth(r.id);
+    return`<tr id="row-${r.id}" class="${selectedRecords.has(r.id)?'selected':''}">
+      <td class="no-print"><input type="checkbox" ${selectedRecords.has(r.id)?'checked':''} onchange="toggleRecord('${r.id}',this.checked)" onclick="event.stopPropagation()"></td>
+      <td style="font-size:11px;color:var(--text2);white-space:nowrap">${r.date.slice(8)+'/'+r.date.slice(5,7)}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--text2)">${r.proto}</td>
+      <td style="font-weight:600">${r.agentName}</td>
+      <td style="font-size:11px;color:var(--text2)">${r.managerName||'—'}</td>
+      <td style="text-align:center;font-weight:800;font-size:15px;color:${sc2}">${r.score}<span style="font-size:10px;font-weight:400;color:var(--text3)">/${r.maxScore||60}</span></td>
+      <td style="text-align:center;font-weight:800;color:var(--red)">−${r.loss}</td>
+      <td>${pend.length?pend.slice(0,2).map(p=>`<span class="badge bg-red" style="font-size:10px;margin:1px">${p.slice(0,24)}${p.length>24?'…':''}</span>`).join('')+(pend.length>2?`<span style="font-size:10px;color:var(--text2)"> +${pend.length-2}</span>`:''): '<span style="color:var(--text3);font-size:12px">—</span>'}</td>
+      <td style="text-align:center;font-weight:600">${r.csatScore||'—'}%</td>
+      <td style="text-align:center"><span class="badge ${cls.c}">${cls.l}</span></td>
+      <td class="no-print">${currentUser.role!=='operador'?`<button class="del-btn" onclick="delRecord('${month}','${r.id}')" title="Remover">✕</button>`:''}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="11" style="text-align:center;padding:2rem;color:var(--text2)">Nenhum registro</td></tr>';
+}
+
+function findRecordMonth(id){
+  for(const m of months){if((records[m]||[]).find(r=>r.id===id))return m;}
+  return null;
+}
+function toggleRecord(id,checked){
+  if(checked)selectedRecords.add(id);else selectedRecords.delete(id);
+  const row=document.getElementById('row-'+id);
+  if(row)row.className=checked?'selected':'';
+  updateBatchBar();
+  const allCk=document.getElementById('rec-check-all');
+  if(allCk){
+    const allCbs=document.querySelectorAll('#rec-tbody input[type=checkbox]');
+    allCk.indeterminate=selectedRecords.size>0&&selectedRecords.size<allCbs.length;
+    allCk.checked=allCbs.length>0&&selectedRecords.size===allCbs.length;
+  }
+}
+function toggleAllRecords(checked){
+  document.querySelectorAll('#rec-tbody input[type=checkbox]').forEach(cb=>{
+    const row=cb.closest('tr');const id=row?.id?.replace('row-','');
+    if(id){cb.checked=checked;if(checked)selectedRecords.add(id);else selectedRecords.delete(id);row.className=checked?'selected':'';}
+  });
+  updateBatchBar();
+}
+function clearSelection(){
+  selectedRecords.clear();
+  document.querySelectorAll('#rec-tbody input[type=checkbox]').forEach(cb=>{cb.checked=false;});
+  document.querySelectorAll('#rec-tbody tr').forEach(r=>{r.className='';});
+  const allCk=document.getElementById('rec-check-all');
+  if(allCk){allCk.checked=false;allCk.indeterminate=false;}
+  updateBatchBar();
+}
+function updateBatchBar(){
+  const bar=document.getElementById('batch-bar');if(!bar)return;
+  const n=selectedRecords.size;bar.style.display=n>0?'flex':'none';
+  const countEl=document.getElementById('batch-count');
+  if(countEl)countEl.textContent=`${n} selecionado${n!==1?'s':''}`;
+}
+function deleteSelectedRecords(){
+  if(!selectedRecords.size){alert('Nenhum registro selecionado.');return;}
+  if(!confirm(`Excluir ${selectedRecords.size} registro${selectedRecords.size!==1?'s':''}? Esta ação não pode ser desfeita.`))return;
+  for(const id of selectedRecords){const m=findRecordMonth(id);if(m)records[m]=(records[m]||[]).filter(r=>r.id!==id);}
+  saveState();renderRecords();
+  showInviteToast(`<strong>${selectedRecords.size||0} registros excluídos</strong>`);
+  selectedRecords.clear();updateBatchBar();
+}
+function delRecord(month,id){
+  if(!confirm('Remover este registro?'))return;
+  if(month)records[month]=(records[month]||[]).filter(r=>r.id!==id);
+  else for(const m of months)records[m]=(records[m]||[]).filter(r=>r.id!==id);
+  saveState();renderRecords();
+}
+function exportRecordsPDF(){
+  const ids=selectedRecords.size>0?[...selectedRecords]:null;
+  let data=getMonthData(currentMonth);
+  if(currentUser.role==='gestor')data=data.filter(r=>r.teamId===currentUser.teamId);
+  if(ids)data=data.filter(r=>ids.includes(r.id));
+  if(!data.length){alert('Nenhum registro para exportar.');return;}
+  data=[...data].sort((a,b)=>b.date.localeCompare(a.date));
+  const now=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const rows=data.map(r=>{
+    const cls=classify(r.score,r.maxScore),pend=[...r.failedQ,...r.failedC];
+    return`<tr><td>${r.date.slice(8)+'/'+r.date.slice(5,7)}</td><td style="font-family:monospace">${r.proto}</td><td>${r.agentName}</td><td>${r.managerName||'—'}</td><td style="text-align:center;font-weight:700;color:${scoreColor(r.score,r.maxScore)}">${r.score}/${r.maxScore||60}</td><td style="text-align:center;color:#FF3B30;font-weight:700">−${r.loss}</td><td>${pend.slice(0,2).join(', ')+(pend.length>2?` +${pend.length-2} mais`:'')}</td><td style="text-align:center">${r.csatScore||'—'}%</td><td style="text-align:center"><span style="font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700;background:${cls.c==='bg-green'?'#d1f2d9':cls.c==='bg-amber'?'#fef3d0':cls.c==='bg-dark'?'#2c2c2e':'#fee5e5'};color:${cls.c==='bg-green'?'#1a6330':cls.c==='bg-amber'?'#7a4800':cls.c==='bg-dark'?'#fff':'#7a1515'}">${cls.l}</span></td></tr>`;
+  }).join('');
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Registros — iGreen Performance</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:2rem;font-size:12px;color:#1c1c1e;}h1{font-size:20px;font-weight:800;margin-bottom:.25rem;}p{color:#6e6e73;margin-bottom:1.5rem;font-size:11px;}table{width:100%;border-collapse:collapse;}th{font-size:9px;font-weight:700;color:#6e6e73;text-align:left;padding:6px 8px;border-bottom:1px solid #e0e0e5;text-transform:uppercase;background:#f5f5f7;}td{padding:7px 8px;border-bottom:1px solid #f0f0f0;vertical-align:middle;}.footer{margin-top:2rem;font-size:10px;color:#aeaeb2;border-top:2px solid #00cc44;padding-top:1rem;text-align:center;}@page{margin:1.5cm;}</style></head><body><h1>Registros de Monitoria — iGreen Performance</h1><p>${ids?ids.length+' registros selecionados':data.length+' registros'} · ${currentMonth==='__ALL__'?'Todos os Meses':currentMonth} · Exportado em ${now}</p><table><thead><tr><th>Data</th><th>Protocolo</th><th>Operador</th><th>Gestor</th><th>Pontuação</th><th>Pts Perdidos</th><th>Pendências</th><th>Qualidade</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table><div class="footer">iGreen Performance · Sistema de Monitoria de Qualidade · ${now}</div></body></html>`;
+  const win=window.open('','_blank','width=1100,height=700');
+  if(!win){alert('Popup bloqueado. Permita popups para exportar.');return;}
+  win.document.write(html);win.document.close();win.focus();setTimeout(()=>win.print(),500);
+}
+
+function renderAdminSettings(){
+  if(!cfgUnlocked){document.getElementById('cfg-locked').style.display='block';document.getElementById('cfg-unlocked').style.display='none';return;}
+  document.getElementById('cfg-locked').style.display='none';document.getElementById('cfg-unlocked').style.display='block';
+  renderCfgTeams();
+  const ops=users.filter(u=>u.role==='operador'),mgrs=users.filter(u=>u.role==='gestor'),admins=users.filter(u=>u.role==='admin');
+  function renderUserTag(u){
+    const isInactive=u.active===false;
+    const statusBadge=isInactive
+      ?`<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(255,59,48,.12);color:#FF3B30">⛔ Inativo</span>`
+      :`<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;${u.passwordSet===false?'background:rgba(255,179,0,.15);color:#FF9500':'background:rgba(0,204,68,.12);color:#00993a'}">${u.passwordSet===false?'⏳ Pendente':'✓ Ativo'}</span>`;
+    const emailDisplay=isInactive?`<span style="color:var(--text3);font-style:italic">desativado</span>`:(u.email||`<span style="color:var(--red)">sem e-mail</span>`);
+    const actions=isInactive
+      ?`<button onclick="cfgReactivateUser('${u.id}')" style="font-size:11px;color:var(--ig-green);background:none;border:none;cursor:pointer;margin-right:8px">↩ Reativar</button><button onclick="cfgDeleteUserPermanent('${u.id}')" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer">🗑 Excluir</button>`
+      :`<button class="uta-btn resend" onclick="resendInvite('${u.id}')" style="font-size:11px;color:var(--ig-green);margin-right:8px">✏️ Senha</button><button class="tag-del uta-btn remove" onclick="cfgRemUser('${u.id}')" style="font-size:11px;color:var(--text3)" title="Desativar">⛔ Desativar</button>`;
+    return`<tr style="border-bottom:1px solid var(--border);opacity:${isInactive?.5:1}"><td style="padding:7px 10px;font-size:13px;font-weight:600">${u.name}</td><td style="padding:7px 10px;font-size:11px;color:var(--text2)">${emailDisplay}</td><td style="padding:7px 10px">${statusBadge}</td><td style="padding:7px 10px;white-space:nowrap">${actions}</td></tr>`;
+  }
+  const tableWrap=(rows,empty)=>rows.length?`<table style="width:100%;border-collapse:collapse;margin-bottom:8px"><thead><tr style="background:var(--bg2)"><th style="padding:6px 10px;font-size:10px;color:var(--text2);text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Nome</th><th style="padding:6px 10px;font-size:10px;color:var(--text2);text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:.04em">E-mail</th><th style="padding:6px 10px;font-size:10px;color:var(--text2);text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Status</th><th style="padding:6px 10px;font-size:10px;color:var(--text2);text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Ações</th></tr></thead><tbody>${rows.map(renderUserTag).join('')}</tbody></table>`:`<p style="font-size:12px;color:var(--text2);margin-bottom:8px">${empty}</p>`;
+  const seniors=users.filter(u=>u.role==='gestor_senior');
+  document.getElementById('cfg-admins').innerHTML=tableWrap(admins,'Nenhum administrador cadastrado.');
+  const cfgSeniorsEl=document.getElementById('cfg-seniors');
+  if(cfgSeniorsEl)cfgSeniorsEl.innerHTML=tableWrap(seniors,'Nenhum gestor sênior cadastrado.');
+  document.getElementById('cfg-agents').innerHTML=tableWrap(ops,'Nenhum operador cadastrado.');
+  document.getElementById('cfg-managers').innerHTML=tableWrap(mgrs,'Nenhum gestor cadastrado.');
+  document.getElementById('cfg-months').innerHTML=months.map(m=>`<span class="tag">${m}<button class="tag-del" onclick="cfgRemMonth('${m}')">✕</button></span>`).join('');
+  renderCfgAssignSenior();renderCfgAssign();cfgPopulateCriteriaTeamSel();cfgLoadTeamCriteria();
+}
+
+function renderCfgTeams(){
+  const el=document.getElementById('cfg-teams-list');if(!el)return;
+  if(!teams.length){el.innerHTML='<p style="font-size:12px;color:var(--text2)">Nenhuma equipe cadastrada.</p>';return;}
+  const allCrit=getAllCriteria();
+  el.innerHTML=teams.map(t=>{
+    const mgr=users.find(u=>u.id===t.managerId),ops=users.filter(u=>u.teamId===t.id&&u.role==='operador');
+    const critName=t.criteriaId&&allCrit[t.criteriaId]?allCrit[t.criteriaId].name:'— Sem modelo —';
+    return`<div class="team-cfg-card"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap"><div style="flex:1"><div style="font-size:14px;font-weight:700;margin-bottom:4px">${t.name}</div><div style="font-size:12px;color:var(--text2);margin-bottom:4px">Gestor: ${mgr?.name||'—'} · ${ops.length} operador${ops.length!==1?'es':''}</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="badge bg-blue" style="font-size:10px">📋 ${critName}</span></div></div><div style="display:flex;flex-direction:column;gap:5px;min-width:140px"><select id="team-model-${t.id}" style="font-size:11px;padding:4px 7px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;" onchange="cfgSetTeamCriteria('${t.id}',this.value)">${Object.values(allCrit).map(cr=>`<option value="${cr.id}" ${(t.criteriaId||'global')===cr.id?'selected':''}>${cr.id==='global'?'🌐 ':''} ${cr.name}</option>`).join('')}</select><button onclick="cfgRemTeam('${t.id}')" class="btn btn-danger btn-sm" style="font-size:11px">🗑 Excluir Equipe</button></div></div></div>`;
+  }).join('');
+}
+
+function cfgShowAddTeam(){
+  const form=document.getElementById('add-team-form');if(!form)return;
+  form.style.display=form.style.display==='none'?'block':'none';
+  const mgrSel=document.getElementById('new-team-manager'),critSel=document.getElementById('new-team-criteria');
+  if(mgrSel){const mgrs=users.filter(u=>u.role==='gestor');mgrSel.innerHTML='<option value="">Selecione...</option>'+mgrs.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');}
+  if(critSel){const all=getAllCriteria();const ms=Object.values(all);critSel.innerHTML='<option value="">— Selecione um modelo —</option>'+ms.map(cr=>`<option value="${cr.id}">${cr.name}</option>`).join('');}
+}
+function cfgAddTeam(){
+  const name=document.getElementById('new-team-name')?.value.trim();
+  const managerId=document.getElementById('new-team-manager')?.value;
+  const criteriaId=document.getElementById('new-team-criteria')?.value||'';
+  const errEl=document.getElementById('add-team-err');
+  if(errEl)errEl.textContent='';
+  if(!name){if(errEl)errEl.textContent='Informe o nome da equipe.';return;}
+  if(teams.find(t=>t.name.toLowerCase()===name.toLowerCase())){if(errEl)errEl.textContent='Já existe uma equipe com este nome.';return;}
+  const tid='t'+Date.now();
+  teams.push({id:tid,name,managerId:managerId||null,criteriaId});
+  if(managerId){const mgr=users.find(u=>u.id===managerId);if(mgr)mgr.teamId=tid;}
+  saveState();
+  if(document.getElementById('new-team-name'))document.getElementById('new-team-name').value='';
+  document.getElementById('add-team-form').style.display='none';
+  renderAdminSettings();buildHeader();
+  showInviteToast(`Equipe <strong>${name}</strong> criada com sucesso!`);
+}
+function cfgRemTeam(tid){
+  const t=teams.find(x=>x.id===tid);if(!t)return;
+  const hasOps=users.some(u=>u.teamId===tid&&u.role==='operador');
+  const msg=hasOps?`Excluir a equipe "${t.name}"?\n\n⚠️ Há operadores vinculados.`:`Excluir a equipe "${t.name}"?`;
+  if(!confirm(msg))return;
+  teams=teams.filter(x=>x.id!==tid);
+  users.forEach(u=>{if(u.teamId===tid)u.teamId=null;});
+  saveState();renderAdminSettings();buildHeader();
+  showInviteToast(`Equipe <strong>${t.name}</strong> excluída.`);
+}
+function cfgSetTeamCriteria(teamId,criteriaId){const t=teams.find(x=>x.id===teamId);if(t){t.criteriaId=criteriaId;saveState();}}
+
+function cfgRemUser(id){
+  const u=users.find(x=>x.id===id);if(!u)return;
+  if(!confirm(`Desativar "${u.name}"?\n\nO usuário não poderá mais fazer login, mas todas as monitorias serão mantidas.`))return;
+  // Mark as inactive instead of deleting — preserves all monitoring data
+  u.active=false;
+  u.email_disabled='__disabled__'+u.email;
+  u.email='';
+  saveState();renderAdminSettings();
+  showInviteToast(`<strong>${u.name}</strong> desativado. Monitorias preservadas.`);
+}
+function cfgReactivateUser(id){
+  const u=users.find(x=>x.id===id);if(!u)return;
+  const modal_html=`<div class="mb" id="reactivate-modal"><div class="mo" style="max-width:400px"><div class="mo-hd"><h3>Reativar — ${u.name}</h3><button class="mo-cl" onclick="document.getElementById('reactivate-modal').remove()">✕</button></div><div class="mo-body"><p style="font-size:13px;color:var(--text2);margin-bottom:1rem">Informe o novo e-mail de acesso para reativar este usuário.</p><div class="field"><label>E-mail</label><input type="email" id="reactivate-email" placeholder="novo@email.com.br" value="${u.email_disabled?u.email_disabled.replace('__disabled__',''):''}"></div></div><div class="mo-ft"><button class="btn btn-sec" onclick="document.getElementById('reactivate-modal').remove()">Cancelar</button><button class="btn btn-dark" onclick="(()=>{const email=document.getElementById('reactivate-email').value.trim();if(!email||!email.includes('@')){alert('E-mail inválido.');return;}const u=users.find(x=>x.id==='${u.id}');if(u){u.active=true;u.email=email;delete u.email_disabled;saveState();document.getElementById('reactivate-modal').remove();renderAdminSettings();showInviteToast('${u.name} reativado com sucesso!');}})()">Reativar</button></div></div></div>`;
+  const div=document.createElement('div');div.innerHTML=modal_html;document.body.appendChild(div.firstChild);
+  setTimeout(()=>document.getElementById('reactivate-email')?.focus(),100);
+}
+function cfgDeleteUserPermanent(id){
+  const u=users.find(x=>x.id===id);if(!u)return;
+  if(!confirm(`⚠️ ATENÇÃO: Excluir permanentemente "${u.name}"?\n\nIsso NÃO apaga as monitorias registradas, mas o usuário não poderá ser reativado.\n\nTem certeza?`))return;
+  users=users.filter(x=>x.id!==id);
+  saveState();renderAdminSettings();
+  showInviteToast(`Usuário excluído permanentemente.`);
+}
+
+let _pendingNewUser=null;
+function cfgOpenSetPassword(user){
+  _pendingNewUser=user;
+  const existing=document.getElementById('set-pw-modal');if(existing)existing.remove();
+  const div=document.createElement('div');div.id='set-pw-modal';div.className='mb';
+  div.innerHTML=`<div class="mo" style="max-width:400px"><div class="mo-hd"><h3>Definir Senha — ${user.name}</h3><button class="mo-cl" onclick="cfgCancelSetPassword()">✕</button></div><div class="mo-body"><p style="font-size:13px;color:var(--text2);margin-bottom:1rem">Defina a senha inicial de acesso.</p><div class="field"><label>E-mail de acesso</label><input type="email" value="${user.email}" readonly style="background:var(--bg2);color:var(--text2)"></div><div class="field"><label>Senha inicial *</label><input type="password" id="set-pw-input" placeholder="Mínimo 4 caracteres" onkeydown="if(event.key==='Enter')cfgConfirmSetPassword()"></div><div id="set-pw-err" style="font-size:11px;color:var(--red);margin-top:-6px;margin-bottom:8px;"></div></div><div class="mo-ft"><button class="btn btn-sec" onclick="cfgCancelSetPassword()">Cancelar</button><button class="btn btn-dark" onclick="cfgConfirmSetPassword()">Salvar e Cadastrar</button></div></div>`;
+  document.body.appendChild(div);
+  setTimeout(()=>document.getElementById('set-pw-input')?.focus(),100);
+}
+function cfgCancelSetPassword(){document.getElementById('set-pw-modal')?.remove();_pendingNewUser=null;}
+function cfgConfirmSetPassword(){
+  const pw=document.getElementById('set-pw-input')?.value||'';
+  const errEl=document.getElementById('set-pw-err');
+  if(pw.length<4){errEl.textContent='Senha deve ter pelo menos 4 caracteres.';return;}
+  const u=_pendingNewUser;if(!u)return;
+  u.password=pw;u.passwordSet=true;users.push(u);
+  document.getElementById('set-pw-modal')?.remove();_pendingNewUser=null;
+  saveStateNow().then(()=>{renderAdminSettings();showInviteToast(`✅ <strong>${u.name}</strong> cadastrado com sucesso!`);});
+}
+
+async function cfgAddAgent(){
+  const n=document.getElementById('new-agent').value.trim();
+  const email=document.getElementById('new-agent-email').value.trim();
+  if(!n){showCfgFieldError('new-agent','Nome do operador é obrigatório.');return;}
+  if(!email||!email.includes('@')){showCfgFieldError('new-agent-email','E-mail válido é obrigatório.');return;}
+  if(users.find(u=>u.email&&u.email.toLowerCase()===email.toLowerCase())){showCfgFieldError('new-agent-email','E-mail já cadastrado.');return;}
+  document.getElementById('new-agent').value='';document.getElementById('new-agent-email').value='';
+  cfgOpenSetPassword({id:'op'+Date.now(),name:n,role:'operador',teamId:null,password:'',email,passwordSet:false});
+}
+async function cfgAddManager(){
+  const n=document.getElementById('new-manager').value.trim();
+  const email=document.getElementById('new-manager-email').value.trim();
+  const isSenior=document.getElementById('new-manager-is-senior')?.checked||false;
+  if(!n){showCfgFieldError('new-manager','Nome do gestor é obrigatório.');return;}
+  if(!email||!email.includes('@')){showCfgFieldError('new-manager-email','E-mail válido é obrigatório.');return;}
+  if(users.find(u=>u.email&&u.email.toLowerCase()===email.toLowerCase())){showCfgFieldError('new-manager-email','E-mail já cadastrado.');return;}
+  document.getElementById('new-manager').value='';document.getElementById('new-manager-email').value='';
+  if(document.getElementById('new-manager-is-senior'))document.getElementById('new-manager-is-senior').checked=false;
+  if(isSenior){
+    // Create as gestor_senior — no team created
+    cfgOpenSetPassword({id:'senior'+Date.now(),name:n,role:'gestor_senior',teamId:null,password:'',email,passwordSet:false});
+  } else {
+    const mid='m'+Date.now(),tid='t'+Date.now();
+    teams.push({id:tid,name:n+"'s Equipe",managerId:mid,criteriaId:''});saveState();
+    cfgOpenSetPassword({id:mid,name:n,role:'gestor',teamId:tid,password:'',email,passwordSet:false});
+  }
+}
+async function cfgAddSenior(){
+  const n=document.getElementById('new-senior').value.trim();
+  const email=document.getElementById('new-senior-email').value.trim();
+  if(!n){showCfgFieldError('new-senior','Nome é obrigatório.');return;}
+  if(!email||!email.includes('@')){showCfgFieldError('new-senior-email','E-mail válido é obrigatório.');return;}
+  if(users.find(u=>u.email&&u.email.toLowerCase()===email.toLowerCase())){showCfgFieldError('new-senior-email','E-mail já cadastrado.');return;}
+  document.getElementById('new-senior').value='';document.getElementById('new-senior-email').value='';
+  cfgOpenSetPassword({id:'senior'+Date.now(),name:n,role:'gestor_senior',teamId:null,password:'',email,passwordSet:false});
+}
+async function cfgAddAdmin(){
+  const n=document.getElementById('new-admin').value.trim();
+  const email=document.getElementById('new-admin-email').value.trim();
+  if(!n){showCfgFieldError('new-admin','Nome do administrador é obrigatório.');return;}
+  if(!email||!email.includes('@')){showCfgFieldError('new-admin-email','E-mail válido é obrigatório.');return;}
+  if(users.find(u=>u.email&&u.email.toLowerCase()===email.toLowerCase())){showCfgFieldError('new-admin-email','E-mail já cadastrado.');return;}
+  document.getElementById('new-admin').value='';document.getElementById('new-admin-email').value='';
+  cfgOpenSetPassword({id:'adm'+Date.now(),name:n,role:'admin',teamId:null,password:'',email,passwordSet:false});
+}
+
+async function resendInvite(userId){
+  const u=users.find(x=>x.id===userId);if(!u)return;
+  const existing=document.getElementById('set-pw-modal');if(existing)existing.remove();
+  const div=document.createElement('div');div.id='set-pw-modal';div.className='mb';
+  div.innerHTML=`<div class="mo" style="max-width:400px"><div class="mo-hd"><h3>Redefinir Senha — ${u.name}</h3><button class="mo-cl" onclick="document.getElementById('set-pw-modal').remove()">✕</button></div><div class="mo-body"><div class="field"><label>Nova Senha</label><input type="password" id="reset-pw-input" placeholder="Mínimo 4 caracteres"></div><div id="reset-pw-err" style="font-size:11px;color:var(--red);margin-top:-6px;"></div></div><div class="mo-ft"><button class="btn btn-sec" onclick="document.getElementById('set-pw-modal').remove()">Cancelar</button><button class="btn btn-dark" onclick="(()=>{const pw=document.getElementById('reset-pw-input').value;if(pw.length<4){document.getElementById('reset-pw-err').textContent='Mínimo 4 caracteres.';return;}const u=users.find(x=>x.id==='${u.id}');if(u){u.password=pw;u.passwordSet=true;saveState();}document.getElementById('set-pw-modal').remove();showInviteToast('Senha redefinida para <strong>${u.name}</strong>');renderAdminSettings();})()">Salvar</button></div></div>`;
+  document.body.appendChild(div);
+  setTimeout(()=>document.getElementById('reset-pw-input')?.focus(),100);
+}
+
+function renderCfgAssignSenior(){
+  const el=document.getElementById('cfg-assign-senior');if(!el)return;
+  const seniors=users.filter(u=>u.role==='gestor_senior');
+  const gestoras=users.filter(u=>u.role==='gestor');
+  if(!seniors.length){el.innerHTML='<p style="font-size:12px;color:var(--text2);padding:8px 0">Nenhum gestor sênior cadastrado. Cadastre em Gestores marcando a opção 🌟 Gestor Sênior.</p>';return;}
+  if(!gestoras.length){el.innerHTML='<p style="font-size:12px;color:var(--text2);padding:8px 0">Nenhuma gestora cadastrada ainda.</p>';return;}
+  el.innerHTML=seniors.map(s=>{
+    const linked=gestoras.filter(g=>g.seniorId===s.id);
+    const unlinked=gestoras.filter(g=>!g.seniorId||g.seniorId!==s.id);
+    const st=avStyle(s.name);
+    return`<div class="mgr-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="av" style="width:28px;height:28px;background:${st.bg};color:${st.fg};font-size:10px">${initials(s.name)}</div>
+          <span style="font-size:13px;font-weight:700">${s.name}</span>
+          <span class="badge" style="background:rgba(175,82,222,.15);color:#AF52DE;font-size:9px">Sênior</span>
+        </div>
+        <span style="font-size:11px;color:var(--text2)">${linked.length} gestora${linked.length!==1?'s':''}</span>
+      </div>
+      <div class="tag-row">${linked.map(g=>`<span class="tag">${g.name}<button class="tag-del" onclick="cfgUnlinkGestora('${g.id}')">✕</button></span>`).join('')}</div>
+      ${unlinked.length?`<div style="display:flex;gap:6px;margin-top:6px">
+        <select id="asg-senior-${s.id}" style="flex:1;font-size:12px;padding:5px 8px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none">
+          <option value="">Vincular gestora...</option>
+          ${unlinked.map(g=>`<option value="${g.id}">${g.name}</option>`).join('')}
+        </select>
+        <button onclick="cfgLinkGestora('${s.id}')" style="background:var(--ig-green);color:#fff;border:none;border-radius:var(--r);padding:5px 12px;font-size:12px;cursor:pointer;font-weight:700">+ Vincular</button>
+      </div>`:'<div style="font-size:11px;color:var(--text3);margin-top:4px">Todas as gestoras vinculadas.</div>'}
+    </div>`;
+  }).join('');
+}
+function cfgLinkGestora(seniorId){
+  const sel=document.getElementById('asg-senior-'+seniorId);
+  if(!sel||!sel.value)return;
+  const g=users.find(u=>u.id===sel.value);
+  if(g){g.seniorId=seniorId;saveState();renderCfgAssignSenior();showInviteToast(`<strong>${g.name}</strong> vinculada com sucesso!`);}
+}
+function cfgUnlinkGestora(gestorId){
+  const g=users.find(u=>u.id===gestorId);
+  if(g){delete g.seniorId;saveState();renderCfgAssignSenior();showInviteToast(`Vínculo removido.`);}
+}
+function renderCfgAssign(){
+  const mgrs=users.filter(u=>u.role==='gestor');
+  const el=document.getElementById('cfg-assign');
+  if(!el)return;
+  if(!mgrs.length){el.innerHTML='<p style="font-size:12px;color:var(--text2);padding:8px 0">Nenhuma gestora cadastrada ainda.</p>';return;}
+  el.innerHTML=mgrs.map(m=>{
+    const tm=teams.find(t=>t.managerId===m.id);
+    const ops2=tm?users.filter(u=>u.role==='operador'&&u.teamId===tm.id):[];
+    const unassigned=users.filter(u=>u.role==='operador'&&(!u.teamId||u.teamId!==tm?.id));
+    return`<div class="mgr-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div><span style="font-size:13px;font-weight:700">${m.name}</span> <span style="font-size:11px;color:var(--text2)">— ${tm?.name||'sem equipe'}</span></div><span style="font-size:11px;color:var(--text2)">${ops2.length} op.</span></div><div class="tag-row">${ops2.map(u=>`<span class="tag">${u.name}<button class="tag-del" onclick="cfgUnassign('${u.id}')">✕</button></span>`).join('')}</div>${unassigned.length?`<div style="display:flex;gap:6px;margin-top:6px"><select id="asg-${m.id}" style="flex:1;font-size:12px;padding:5px 8px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none"><option value="">Adicionar operador...</option>${unassigned.map(u=>`<option value="${u.id}">${u.name}</option>`).join('')}</select><button onclick="cfgAssign('${m.id}','${tm?.id||''}')" style="background:var(--green);color:#fff;border:none;border-radius:var(--r);padding:5px 12px;font-size:12px;cursor:pointer;font-weight:700">+ Vincular</button></div>`:'<div style="font-size:11px;color:var(--text3);margin-top:4px">Todos vinculados.</div>'}</div>`;
+  }).join('');
+}
+function cfgAssign(managerId,teamId){
+  const sel=document.getElementById('asg-'+managerId);if(!sel||!sel.value)return;
+  const u=users.find(x=>x.id===sel.value);if(!u)return;
+  if(!teamId){const tm=teams.find(t=>t.managerId===managerId);if(!tm)return;teamId=tm.id;}
+  u.teamId=teamId;saveState();renderCfgAssign();
+  showInviteToast(`<strong>${u.name}</strong> transferido(a). Painéis atualizados.`);
+}
+function cfgUnassign(uid){const u=users.find(x=>x.id===uid);if(!u)return;u.teamId=null;saveState();renderCfgAssign();}
+
+function cfgAddMonth(){
+  const v=document.getElementById('new-month').value.trim();if(!v)return;
+  if(!months.includes(v)){months.push(v);if(!records[v])records[v]=[];saveState();buildMonthPicker();}
+  renderAdminSettings();document.getElementById('new-month').value='';
+}
+function cfgRemMonth(m){
+  if(!confirm(`Remover mês "${m}"? Registros serão apagados.`))return;
+  months=months.filter(x=>x!==m);delete records[m];
+  if(currentMonth===m)currentMonth=months[months.length-1]||'';
+  saveState();buildMonthPicker();renderAdminSettings();
+}
+
+function renderCfgScoringItems(){
+  const sc=getScoring();
+  document.getElementById('cfg-scoring-items').innerHTML=sc.items.map(it=>`<div class="sc-row sc-item-row" data-id="${it.id}"><span style="color:var(--text3);font-size:12px;flex-shrink:0">⠿</span><input type="text" class="sc-item-label" value="${it.label.replace(/"/g,'&quot;')}" onchange="cfgSaveScoring()"><input type="number" class="sc-item-penalty" min="0" max="200" value="${it.penalty}" onchange="cfgSaveScoring()"><span style="font-size:11px;color:var(--text2)">pts</span><button onclick="cfgRemQItem('${it.id}')" class="del-btn">✕</button></div>`).join('');
+  document.getElementById('cfg-q-total').textContent=sc.items.reduce((s,i)=>s+i.penalty,0);
+}
+function cfgSaveScoring(){
+  const rows=document.querySelectorAll('.sc-item-row'),items=[];
+  rows.forEach(r=>{const l=r.querySelector('.sc-item-label')?.value.trim()||'',p=parseInt(r.querySelector('.sc-item-penalty')?.value)||0;if(l)items.push({id:r.dataset.id,label:l,penalty:p});});
+  const maxScore=parseInt(document.getElementById('cfg-max-score')?.value)||60;
+  const sc=getScoring();ss(K.SCORING,{...sc,maxScore,items});
+  const el=document.getElementById('cfg-q-total');if(el)el.textContent=items.reduce((s,i)=>s+i.penalty,0);
+  buildModalChecks();
+}
+function cfgAddQItem(){
+  const l=document.getElementById('new-qi-label').value.trim(),p=parseInt(document.getElementById('new-qi-pts').value)||0;
+  if(!l)return;
+  const sc=getScoring();sc.items.push({id:'qi'+Date.now(),label:l,penalty:p});ss(K.SCORING,sc);
+  document.getElementById('new-qi-label').value='';document.getElementById('new-qi-pts').value='';
+  renderCfgScoringItems();buildModalChecks();
+}
+function cfgRemQItem(id){if(!confirm('Remover item?'))return;const sc=getScoring();sc.items=sc.items.filter(i=>i.id!==id);ss(K.SCORING,sc);renderCfgScoringItems();buildModalChecks();}
+function cfgResetQItems(){if(!confirm('Restaurar itens padrão?'))return;const sc=getScoring();ss(K.SCORING,{...sc,items:SCORING_DEF.items});renderCfgScoringItems();buildModalChecks();}
+
+function cfgPopulateCriteriaTeamSel(){
+  const sel=document.getElementById('cfg-criteria-team-sel');if(!sel)return;
+  const all=getAllCriteria();
+  const models=Object.values(all);
+  if(!models.length){sel.innerHTML='<option value="">— Nenhum modelo criado —</option>';return;}
+  sel.innerHTML=models.map(cr=>`<option value="${cr.id}">${cr.name}</option>`).join('');
+}
+function cfgLoadTeamCriteria(){
+  const cid=document.getElementById('cfg-criteria-team-sel')?.value||'';
+  if(!cid){const el=document.getElementById('cfg-criteria-editor');if(el)el.innerHTML='<p style="font-size:13px;color:var(--text2);padding:8px 0">Crie um modelo clicando em + Novo Modelo.</p>';return;}
+  const cr=getCriteria(cid);
+  const el=document.getElementById('cfg-criteria-editor');if(!el)return;
+  el.innerHTML=`<div class="g2" style="align-items:start;margin-bottom:12px"><div><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase">Nome do Modelo</div><div style="display:flex;gap:6px"><input id="cr-name" value="${cr.name}" style="flex:1;font-size:12px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;"><input id="cr-maxscore" type="number" min="1" max="200" value="${cr.maxScore}" style="width:70px;font-size:13px;font-weight:700;padding:7px 8px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);text-align:center;outline:none;"><span style="font-size:11px;color:var(--text2);align-self:center">pts máx.</span></div><div style="display:flex;gap:6px;margin-top:6px;align-items:center"><label style="font-size:11px;color:var(--text2)">Monitorias/op/mês:</label><input id="cr-monperop" type="number" min="1" max="50" value="${cr.monPerOp||8}" style="width:60px;font-size:13px;font-weight:700;padding:5px 8px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);text-align:center;outline:none;"></div></div><div><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase">Equipes usando este modelo</div><div style="display:flex;flex-wrap:wrap;gap:5px">${teams.filter(t=>(t.criteriaId||'global')===cid).map(t=>`<span class="tag">${t.name}</span>`).join('')||'<span style="font-size:11px;color:var(--text3)">Nenhuma equipe</span>'}</div><div style="margin-top:8px;display:flex;gap:6px"><select id="cr-assign-team" style="flex:1;font-size:12px;padding:5px 8px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;"><option value="">Atribuir a uma equipe...</option>${teams.map(t=>`<option value="${t.id}">${t.name} (${getCriteria(t.criteriaId||'global').name})</option>`).join('')}</select><button onclick="cfgAssignCriteriaToTeam('${cid}')" class="btn btn-sec btn-sm">Atribuir</button></div></div></div><div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase">Itens de Qualidade (desconto parcial)</div><div id="cr-items-list">${cr.items.map(it=>`<div class="sc-row cr-item-row" data-id="${it.id}" data-cid="${cid}"><span style="color:var(--text3);font-size:12px;flex-shrink:0">⠿</span><input type="text" class="cr-item-label" value="${it.label.replace(/"/g,'&quot;')}" style="flex:1;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);outline:none;min-width:0"><input type="number" class="cr-item-penalty" min="0" max="200" value="${it.penalty}" style="width:54px;font-size:13px;font-weight:700;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);text-align:center;outline:none;flex-shrink:0"><span style="font-size:11px;color:var(--text2)">pts</span><button onclick="cfgRemCriteriaItem('${cid}','${it.id}')" class="del-btn">✕</button></div>`).join('')}</div><div style="display:flex;gap:6px;margin-top:8px"><input id="cr-new-label" placeholder="Novo critério de qualidade..." style="flex:1;font-size:12px;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;"><input id="cr-new-pts" type="number" min="0" placeholder="pts" style="width:54px;font-size:12px;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);text-align:center;outline:none;"><button onclick="cfgAddCriteriaItem('${cid}')" style="background:var(--green);color:#fff;border:none;border-radius:var(--r);padding:6px 12px;font-size:12px;cursor:pointer;font-weight:700">+ Item</button></div><div style="font-size:11px;font-weight:700;color:var(--text2);margin:14px 0 6px;text-transform:uppercase">Itens Críticos (zeram a monitoria)</div><div id="cr-crit-list">${cr.criticalItems.map(it=>`<div class="sc-row cr-crit-row" data-id="${it.id}" data-cid="${cid}" style="border-color:#ffccca;"><span style="color:var(--red);font-size:12px;flex-shrink:0">⛔</span><input type="text" class="cr-crit-label" value="${it.label.replace(/"/g,'&quot;')}" style="flex:1;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);outline:none;min-width:0"><span style="font-size:11px;font-weight:700;color:var(--red)">Zera</span><button onclick="cfgRemCritItem('${cid}','${it.id}')" class="del-btn">✕</button></div>`).join('')}</div><div style="display:flex;gap:6px;margin-top:8px"><input id="cr-new-crit-label" placeholder="Novo item crítico..." style="flex:1;font-size:12px;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text);outline:none;"><button onclick="cfgAddCritItem('${cid}')" style="background:var(--red);color:#fff;border:none;border-radius:var(--r);padding:6px 12px;font-size:12px;cursor:pointer;font-weight:700">+ Crítico</button></div><div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap"><button onclick="cfgSaveCurrentCriteria('${cid}')" class="btn btn-dark btn-sm">💾 Salvar Modelo</button>${cid!=='global'?`<button onclick="cfgDeleteCriteria('${cid}')" class="btn btn-danger btn-sm">🗑 Excluir Modelo</button>`:''}</div><div id="cr-save-msg" style="font-size:12px;color:var(--green);margin-top:8px;display:none">✓ Modelo salvo com sucesso!</div>`;
+}
+
+function cfgSaveCurrentCriteria(cid){
+  const all=getAllCriteria();
+  const cr=all[cid]||JSON.parse(JSON.stringify(CRITERIA_EMPTY));cr.id=cid;
+  cr.name=document.getElementById('cr-name')?.value||cr.name;
+  cr.maxScore=parseInt(document.getElementById('cr-maxscore')?.value)||60;
+  cr.monPerOp=parseInt(document.getElementById('cr-monperop')?.value)||8;
+  const itemRows=document.querySelectorAll('.cr-item-row'),items=[];
+  itemRows.forEach(r=>{const l=r.querySelector('.cr-item-label')?.value.trim()||'',p=parseInt(r.querySelector('.cr-item-penalty')?.value)||0;if(l)items.push({id:r.dataset.id,label:l,penalty:p});});
+  cr.items=items;
+  const critRows=document.querySelectorAll('.cr-crit-row'),critItems=[];
+  critRows.forEach(r=>{const l=r.querySelector('.cr-crit-label')?.value.trim()||'';if(l)critItems.push({id:r.dataset.id,label:l});});
+  cr.criticalItems=critItems;all[cid]=cr;saveCriteria(all);renderCfgTeams();
+  const mEl=document.getElementById('cr-save-msg');if(mEl){mEl.style.display='block';setTimeout(()=>mEl.style.display='none',2500);}
+  buildModalChecks();
+}
+function cfgAddCriteriaItem(cid){
+  const l=document.getElementById('cr-new-label')?.value.trim(),p=parseInt(document.getElementById('cr-new-pts')?.value)||0;
+  if(!l)return;
+  const all=getAllCriteria(),cr=all[cid]||JSON.parse(JSON.stringify(CRITERIA_EMPTY));
+  cr.id=cid;cr.items.push({id:'ci'+Date.now(),label:l,penalty:p});all[cid]=cr;saveCriteria(all);cfgLoadTeamCriteria();
+}
+function cfgRemCriteriaItem(cid,itemId){
+  if(!confirm('Remover este critério?'))return;
+  const all=getAllCriteria(),cr=all[cid];if(!cr)return;
+  cr.items=cr.items.filter(i=>i.id!==itemId);all[cid]=cr;saveCriteria(all);cfgLoadTeamCriteria();
+}
+function cfgAddCritItem(cid){
+  const l=document.getElementById('cr-new-crit-label')?.value.trim();if(!l)return;
+  const all=getAllCriteria(),cr=all[cid]||JSON.parse(JSON.stringify(CRITERIA_EMPTY));
+  cr.id=cid;if(!cr.criticalItems)cr.criticalItems=[];
+  cr.criticalItems.push({id:'cc'+Date.now(),label:l});all[cid]=cr;saveCriteria(all);cfgLoadTeamCriteria();
+}
+function cfgRemCritItem(cid,itemId){
+  if(!confirm('Remover item crítico?'))return;
+  const all=getAllCriteria(),cr=all[cid];if(!cr)return;
+  cr.criticalItems=(cr.criticalItems||[]).filter(i=>i.id!==itemId);all[cid]=cr;saveCriteria(all);cfgLoadTeamCriteria();
+}
+function cfgNewCriteriaTemplate(){
+  const name=prompt('Nome do novo modelo de avaliação:');if(!name)return;
+  const id='crit_'+Date.now(),all=getAllCriteria();
+  all[id]={...JSON.parse(JSON.stringify(CRITERIA_EMPTY)),id,name};
+  saveCriteria(all);cfgPopulateCriteriaTeamSel();renderCfgTeams();
+  const sel=document.getElementById('cfg-criteria-team-sel');if(sel){sel.value=id;cfgLoadTeamCriteria();}
+}
+function cfgDeleteCriteria(cid){
+  if(!confirm('Excluir este modelo? Equipes serão revertidas para o padrão global.'))return;
+  const all=getAllCriteria();delete all[cid];
+  teams.forEach(t=>{if(t.criteriaId===cid)t.criteriaId='global';});
+  saveState();saveCriteria(all);cfgPopulateCriteriaTeamSel();cfgLoadTeamCriteria();renderCfgTeams();
+}
+function cfgAssignCriteriaToTeam(cid){
+  const sel=document.getElementById('cr-assign-team');if(!sel||!sel.value)return;
+  const team=teams.find(t=>t.id===sel.value);
+  if(team){team.criteriaId=cid;saveState();cfgLoadTeamCriteria();renderCfgTeams();}
+}
+function cfgChangePin(){
+  const v=document.getElementById('cfg-new-pin')?.value.trim();
+  if(!/^\d{4}$/.test(v)){alert('PIN deve ter 4 dígitos.');return;}
+  adminPin=v;ss(K.PIN,v);document.getElementById('cfg-new-pin').value='';alert('PIN alterado!');
+}
+function lockCfg(){cfgUnlocked=false;document.getElementById('cfg-locked').style.display='block';document.getElementById('cfg-unlocked').style.display='none';}
+
+let pinBuf='';
+function showPin(){pinBuf='';updPinDots();document.getElementById('pin-err').textContent='';document.getElementById('pin-modal').style.display='flex';}
+function hidePin(){document.getElementById('pin-modal').style.display='none';}
+function pk(d){if(pinBuf.length>=4)return;pinBuf+=d;updPinDots();if(pinBuf.length===4){if(pinBuf===adminPin){cfgUnlocked=true;hidePin();renderAdminSettings();}else{document.getElementById('pin-err').textContent='PIN incorreto.';pinBuf='';updPinDots();}}}
+function pkBk(){pinBuf=pinBuf.slice(0,-1);updPinDots();document.getElementById('pin-err').textContent='';}
+function updPinDots(){for(let i=0;i<4;i++)document.getElementById('pd'+i).classList.toggle('f',i<pinBuf.length);}
+
+function getModalCriteria(){
+  const agId=document.getElementById('f-agent')?.value;
+  if(agId){const u2=users.find(x=>x.id===agId);if(u2?.teamId){const sc=getTeamCriteria(u2.teamId);if(sc&&sc.id)return sc;}}
+  if(currentUser?.teamId){const sc=getTeamCriteria(currentUser.teamId);if(sc&&sc.id)return sc;}
+  return CRITERIA_EMPTY;
+}
+function buildModalDropdowns(){
+  const ms=document.getElementById('f-month');
+  if(ms)ms.innerHTML=months.map(m=>`<option value="${m}"${m===currentMonth?' selected':''}>${m}</option>`).join('');
+  const ag=document.getElementById('f-agent');
+  if(ag){
+    const opList=currentUser.role==='gestor'?users.filter(u=>u.role==='operador'&&u.teamId===currentUser.teamId):users.filter(u=>u.role==='operador');
+    ag.innerHTML='<option value="">Selecione...</option>'+[...opList].sort((a,b)=>a.name.localeCompare(b.name)).map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+    ag.onchange=()=>{
+      const u2=users.find(x=>x.id===ag.value);
+      const tm=teams.find(t=>t.id===u2?.teamId);
+      const mgr=users.find(u=>u.id===tm?.managerId);
+      const mgrEl=document.getElementById('f-manager');
+      if(mgr&&mgrEl)mgrEl.value=mgr.id;
+      buildModalChecks();updScore();
+    };
+  }
+  const mgr=document.getElementById('f-manager');
+  if(mgr)mgr.innerHTML='<option value="">Selecione...</option>'+users.filter(u=>u.role==='gestor').map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+}
+function buildModalChecks(){
+  const sc=getModalCriteria();
+  const noModel='<div style="font-size:12px;color:var(--text2);padding:8px 0">Nenhum critério definido para esta equipe. Configure em Configurações → Critérios por Equipe.</div>';
+  document.getElementById('modal-quality').innerHTML=(sc.items||[]).length?sc.items.map(it=>`<div class="chk-item" onclick="tgl('${it.id}')"><input type="checkbox" id="${it.id}" onchange="updScore()"><span class="chk-text">${it.label}</span><span class="chk-pts">−${it.penalty} pts</span></div>`).join(''):noModel;
+  document.getElementById('modal-critical').innerHTML=(sc.criticalItems||[]).length?sc.criticalItems.map(it=>`<div class="chk-item crit" onclick="tgl('${it.id}')"><input type="checkbox" id="${it.id}" onchange="updScore()"><span class="chk-text">${it.label}</span><span class="chk-pts" style="color:var(--red)">Zera</span></div>`).join(''):'';
+  const mx=sc.maxScore||60;
+  document.getElementById('f-max-label').textContent=`(máx. ${mx} pts)`;
+  document.getElementById('score-prev').textContent=mx;
+}
+function tgl(id){const cb=document.getElementById(id);if(cb){cb.checked=!cb.checked;updScore();}}
+function updScore(){
+  const sc=getModalCriteria();
+  const hasCrit=sc.criticalItems.some(it=>document.getElementById(it.id)?.checked);
+  let score=sc.maxScore;
+  if(hasCrit){score=0;}else{sc.items.forEach(it=>{if(document.getElementById(it.id)?.checked)score-=it.penalty;});score=Math.max(0,score);}
+  const loss=sc.maxScore-score;
+  const el=document.getElementById('score-prev');
+  el.textContent=score;el.style.color=score>=sc.maxScore*.7?'#34C759':score>=sc.maxScore*.5?'#FF9500':'#FF3B30';
+  const lEl=document.getElementById('f-loss-preview');if(lEl)lEl.textContent=loss;
+  document.getElementById('crit-warn').style.display=hasCrit?'block':'none';
+}
+function updatePerfilStyle(){
+  Object.values(PERFIS).forEach(p=>{
+    const lbl=document.getElementById('lbl-perfil-'+p.id);
+    const inp=document.querySelector(`input[name="f-perfil"][value="${p.id}"]`);
+    if(lbl&&inp){
+      if(inp.checked){lbl.style.background='var(--ig-pale)';lbl.style.borderColor='var(--ig-green)';lbl.style.color='var(--ig-dark)';lbl.style.fontWeight='700';}
+      else{lbl.style.background='var(--bg)';lbl.style.borderColor='var(--border2)';lbl.style.color='var(--text)';lbl.style.fontWeight='400';}
+    }
+  });
+}
+function updateNivelStyle(){
+  Object.values(NIVEIS).forEach(n=>{
+    const lbl=document.getElementById('lbl-nivel-'+n.id);
+    const inp=document.querySelector(`input[name="f-nivel"][value="${n.id}"]`);
+    if(lbl&&inp){
+      if(inp.checked){lbl.style.background=n.bg;lbl.style.borderColor=n.border;lbl.style.color=n.color;lbl.style.fontWeight='700';}
+      else{lbl.style.background='var(--bg)';lbl.style.borderColor='var(--border2)';lbl.style.color='var(--text)';lbl.style.fontWeight='400';}
+    }
+  });
+}
+function openModal(){
+  document.getElementById('f-proto').value='';document.getElementById('f-obs').value='';
+  // Build perfil options
+  const perfilEl=document.getElementById('f-perfil-options');
+  if(perfilEl){
+    perfilEl.innerHTML=Object.values(PERFIS).map(p=>`
+      <label title="${p.desc.join(' • ')}" style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:20px;border:1px solid var(--border2);cursor:pointer;font-size:12px;background:var(--bg);transition:all .15s;user-select:none" id="lbl-perfil-${p.id}">
+        <input type="checkbox" name="f-perfil" value="${p.id}" style="display:none" onchange="updatePerfilStyle()">
+        <span>${p.icon}</span><span>${p.label}</span>
+      </label>`).join('');
+  }
+  // Build nivel options
+  const nivelEl=document.getElementById('f-nivel-options');
+  if(nivelEl){
+    nivelEl.innerHTML=Object.values(NIVEIS).map(n=>`
+      <label style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;border:1px solid var(--border2);cursor:pointer;font-size:12px;background:var(--bg);transition:all .15s;user-select:none" id="lbl-nivel-${n.id}">
+        <input type="radio" name="f-nivel" value="${n.id}" style="display:none" onchange="updateNivelStyle()">
+        <span>${n.label}</span>
+      </label>`).join('');
+  }
+  document.getElementById('f-date').value=new Date().toISOString().slice(0,10);
+  buildModalDropdowns();buildModalChecks();updScore();
+  document.getElementById('modal').style.display='flex';
+}
+function closeModal(){document.getElementById('modal').style.display='none';}
+function addEntry(){
+  const sc=getModalCriteria();
+  const proto=document.getElementById('f-proto').value.trim();
+  const agentId=document.getElementById('f-agent').value;
+  const managerId=document.getElementById('f-manager').value;
+  const date=document.getElementById('f-date').value;
+  const month=document.getElementById('f-month').value;
+  const obs=document.getElementById('f-obs').value;
+  const csatScore=null;
+  const perfilSels=[...document.querySelectorAll('input[name="f-perfil"]:checked')].map(i=>i.value);
+  const nivelSel=document.querySelector('input[name="f-nivel"]:checked');
+  const perfil=perfilSels.length?perfilSels:null;
+  const nivel=nivelSel?.value||null;
+  if(!proto||!agentId||!date||!month){alert('Preencha protocolo, operador, mês e data!');return;}
+  const hasCrit=sc.criticalItems.some(it=>document.getElementById(it.id)?.checked);
+  const failedQ=sc.items.filter(it=>document.getElementById(it.id)?.checked).map(it=>it.label);
+  const failedC=sc.criticalItems.filter(it=>document.getElementById(it.id)?.checked).map(it=>it.label);
+  let score=sc.maxScore;
+  if(hasCrit){score=0;}else{sc.items.forEach(it=>{if(document.getElementById(it.id)?.checked)score-=it.penalty;});score=Math.max(0,score);}
+  const loss=sc.maxScore-score;
+  const agent=users.find(u=>u.id===agentId),mgr=users.find(u=>u.id===managerId);
+  const tm=teams.find(t=>t.id===agent?.teamId);
+  if(!records[month])records[month]=[];
+  records[month].push({id:'r'+Date.now()+'_'+Math.random().toString(36).slice(2),proto,agentId,agentName:agent?.name||'',managerId,managerName:mgr?.name||'',teamId:agent?.teamId||'',teamName:tm?.name||'',criteriaId:tm?.criteriaId||'global',maxScore:sc.maxScore,date,score,loss,csatScore,perfil,nivel,failedQ,failedC,hasCrit,obs});
+  saveStateNow().then(()=>{closeModal();refreshView();});
+}
+
+function showScreen(name){
+  document.getElementById('login-screen').style.display='none';
+  document.querySelectorAll('.auth-screen').forEach(s=>s.classList.remove('active'));
+  if(name==='login'){document.getElementById('login-screen').style.display='flex';}
+  else if(name==='recuperar-senha'){document.getElementById('screen-recuperar-senha').classList.add('active');document.getElementById('reset-email').value='';showMsg('reset-msg','','');document.getElementById('reset-email-err').textContent='';}
+  else if(name==='criar-senha'){document.getElementById('screen-criar-senha').classList.add('active');document.getElementById('new-pass').value='';document.getElementById('confirm-pass').value='';showMsg('create-msg','','');onPassInput();}
+}
+function showMsg(elId,text,type){const el=document.getElementById(elId);if(!el)return;el.textContent=text;el.className='auth-msg'+(type?' '+type:'');if(!type)el.style.display='none';}
+function onPassInput(){
+  const val=document.getElementById('new-pass')?.value||'';
+  const bar=document.getElementById('pass-strength-bar'),hint=document.getElementById('pass-strength-hint');if(!bar)return;
+  let s=0;if(val.length>=6)s++;if(val.length>=10)s++;if(/[A-Z]/.test(val))s++;if(/[0-9]/.test(val))s++;if(/[^A-Za-z0-9]/.test(val))s++;
+  const lvs=[{pct:'0%',c:'transparent',t:''},{pct:'25%',c:'#FF5252',t:'Muito fraca'},{pct:'50%',c:'#FFB300',t:'Fraca'},{pct:'70%',c:'#FF9500',t:'Moderada'},{pct:'88%',c:'#00cc44',t:'Forte'},{pct:'100%',c:'#00E676',t:'Muito forte ✓'}];
+  const lv=lvs[Math.min(s,5)];bar.style.width=val.length?lv.pct:'0%';bar.style.background=lv.c;if(hint){hint.textContent=val.length?lv.t:'';hint.style.color=lv.c;}
+}
+async function requestPasswordReset(){
+  const emailEl=document.getElementById('reset-email'),errEl=document.getElementById('reset-email-err'),btn=document.getElementById('reset-btn');
+  const email=emailEl.value.trim();errEl.textContent='';showMsg('reset-msg','','');
+  if(!email||!email.includes('@')){errEl.textContent='Informe um e-mail válido.';return;}
+  btn.disabled=true;btn.textContent='Enviando...';
+  const redirectTo=window.location.href.split('#')[0];
+  await _supabase.auth.resetPasswordForEmail(email,{redirectTo});
+  showMsg('reset-msg','Se o e-mail estiver cadastrado, você receberá um link para redefinir sua senha.','success');
+  btn.disabled=false;btn.textContent='Enviar link de recuperação';emailEl.value='';
+}
+async function createPassword(){
+  const passEl=document.getElementById('new-pass'),confEl=document.getElementById('confirm-pass');
+  const passErrEl=document.getElementById('new-pass-err'),confErrEl=document.getElementById('confirm-pass-err'),btn=document.getElementById('create-btn');
+  const pass=passEl.value,conf=confEl.value;
+  passErrEl.textContent='';confErrEl.textContent='';showMsg('create-msg','','');
+  let valid=true;
+  if(pass.length<6){passErrEl.textContent='Mínimo 6 caracteres.';valid=false;}
+  if(conf!==pass){confErrEl.textContent='As senhas não coincidem.';valid=false;}
+  if(!valid)return;
+  btn.disabled=true;btn.textContent='Salvando...';
+  const{error}=await _supabase.auth.updateUser({password:pass});
+  if(error){showMsg('create-msg','Erro: '+error.message,'error');btn.disabled=false;btn.textContent='Criar senha';return;}
+  showMsg('create-msg','Senha criada! Redirecionando...','success');
+  btn.disabled=false;btn.textContent='Criar senha';
+  setTimeout(()=>{_supabase.auth.signOut();showScreen('login');},2500);
+}
+
+function showInviteToast(html){
+  const t=document.getElementById('invite-toast'),txt=document.getElementById('invite-toast-text');
+  if(!t||!txt)return;txt.innerHTML=html;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),5000);
+}
+function showCfgFieldError(inputId,msg){
+  const el=document.getElementById(inputId);if(!el)return;
+  el.style.borderColor='var(--red)';el.focus();
+  let errEl=el.nextElementSibling;
+  if(!errEl||!errEl.classList.contains('cfg-field-err')){errEl=document.createElement('div');errEl.className='cfg-field-err';errEl.style.cssText='font-size:11px;color:#ff6b6b;margin-top:3px;';el.parentNode.insertBefore(errEl,el.nextSibling);}
+  errEl.textContent=msg;
+  el.addEventListener('input',()=>{el.style.borderColor='';errEl.textContent='';},{once:true});
+}
+function exportPDF(containerId,personName){
+  const container=document.getElementById(containerId);if(!container){alert('Conteúdo não encontrado.');return;}
+  const ci={};container.querySelectorAll('canvas').forEach(cv=>{try{ci[cv.id]=cv.toDataURL('image/png');}catch(e){}});
+  const clone=container.cloneNode(true);
+  clone.querySelectorAll('canvas').forEach(cv=>{if(ci[cv.id]){const img=document.createElement('img');img.src=ci[cv.id];img.style.cssText='width:100%;height:auto;border-radius:6px;';cv.parentNode.replaceChild(img,cv);}});
+  clone.querySelectorAll('.no-print,.back-btn,.btn-green').forEach(e=>e.remove());
+  const now=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório — ${personName||'Operador'}</title><style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff;color:#1c1c1e;padding:2rem;font-size:13px;}.pdf-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:2px solid #00cc44;}h1{font-size:20px;font-weight:800;}.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem;}.kpi{border:1px solid #e0e0e5;border-radius:10px;padding:.9rem 1rem;}.kpi-label{font-size:9px;color:#6e6e73;font-weight:700;text-transform:uppercase;margin-bottom:4px;}.kpi-val{font-size:24px;font-weight:800;}.c-green{color:#34C759;}.c-red{color:#FF3B30;}.c-amber{color:#FF9500;}.card{border:1px solid #e0e0e5;border-radius:10px;padding:1rem;margin-bottom:1rem;}.card-title{font-size:9px;font-weight:700;color:#6e6e73;text-transform:uppercase;margin-bottom:.75rem;}.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem;}table{width:100%;border-collapse:collapse;font-size:11px;}th{font-size:9px;font-weight:700;color:#6e6e73;text-align:left;padding:6px 8px;border-bottom:1px solid #e0e0e5;text-transform:uppercase;}td{padding:7px 8px;border-bottom:1px solid #f0f0f0;}.badge{font-size:9px;padding:2px 7px;border-radius:20px;font-weight:700;display:inline-block;}.bg-green{background:#d1f2d9;color:#1a6330;}.bg-amber{background:#fef3d0;color:#7a4800;}.bg-red{background:#fee5e5;color:#7a1515;}.bg-dark{background:#2c2c2e;color:#fff;}.op-hero{background:linear-gradient(135deg,#1c1c1e,#2c2c2e);border-radius:10px;padding:1.25rem;margin-bottom:1rem;display:flex;align-items:center;gap:1rem;}.month-cmp{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-bottom:1rem;}.mc{border:1px solid #e0e0e5;border-radius:8px;padding:.75rem;}.mc.curr{border-color:#34C759;background:#eaf9ee;}.badge{font-size:9px;padding:2px 6px;border-radius:10px;font-weight:700;display:inline-block;}.bg-green{background:#d1f2d9;color:#1a6330;}.bg-amber{background:#fef3d0;color:#7a4800;}.bg-red{background:#fee5e5;color:#7a1515;}.bg-dark{background:#2c2c2e;color:#fff;}td{padding:6px 8px;border-bottom:1px solid #f0f0f0;vertical-align:top;font-size:11px;line-height:1.4;}th{font-size:9px;font-weight:700;color:#6e6e73;text-align:left;padding:6px 8px;border-bottom:1px solid #e0e0e5;text-transform:uppercase;background:#f5f5f7;}.pdf-footer{margin-top:2rem;padding-top:1rem;border-top:2px solid #00cc44;font-size:10px;color:#aeaeb2;text-align:center;}.no-print{display:none!important;}@page{margin:1.5cm;}</style></head><body><div class="pdf-header"><div><div style="font-size:10px;font-weight:700;color:#00993a;text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">iGreen Performance · Monitoria de Qualidade</div><h1>Relatório de Performance</h1><div style="font-size:12px;color:#6e6e73;margin-top:3px">${personName||''} · ${currentMonth} · ${now}</div></div><div style="text-align:right;font-size:10px;color:#aeaeb2">Documento confidencial</div></div>${clone.innerHTML}<div class="pdf-footer">iGreen Performance · ${now}</div></body></html>`;
+  const win=window.open('','_blank','width=900,height=700');if(!win){alert('Popup bloqueado.');return;}
+  win.document.write(html);win.document.close();win.focus();setTimeout(()=>win.print(),600);
+}
+
+// ══════════════════════════════════════════════════════════
+// SUPABASE CONFIG
+// ══════════════════════════════════════════════════════════
+const SUPABASE_URL='https://eiiurwzccrliclnpuuii.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpaXVyd3pjY3JsaWNsbnB1dWlpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NDczNzEsImV4cCI6MjA4OTMyMzM3MX0.BzUg_f6CvNfie0tRXpjGov-tCUyfdTLODg1pUMhWCso';
+const _supabase=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let _syncTimeout=null;
+let _lastRemoteAt=0;   // timestamp of last known remote state
+let _isSaving=false;
+let _syncIndicatorTimeout=null;
+let _pollInterval=null;
+let _dbReady=false;
+
+function showSyncIndicator(state){
+  let el=document.getElementById('sync-indicator');
+  if(!el){
+    el=document.createElement('div');
+    el.id='sync-indicator';
+    el.style.cssText='position:fixed;bottom:1rem;left:1rem;font-size:11px;padding:6px 13px;border-radius:20px;z-index:9999;transition:opacity .3s;pointer-events:none;font-weight:600;opacity:0;';
+    document.body.appendChild(el);
+  }
+  clearTimeout(_syncIndicatorTimeout);
+  const cfg={
+    saving:{t:'⏳ Salvando...',bg:'rgba(255,179,0,.18)',c:'#b36a00',b:'rgba(255,179,0,.4)'},
+    saved:{t:'✓ Salvo',bg:'rgba(0,204,68,.15)',c:'#00993a',b:'rgba(0,204,68,.3)'},
+    error:{t:'⚠ Falha — tentando novamente...',bg:'rgba(255,59,48,.15)',c:'#FF3B30',b:'rgba(255,59,48,.3)'},
+    reload:{t:'🔄 Novos dados disponíveis...',bg:'rgba(0,122,255,.15)',c:'#007AFF',b:'rgba(0,122,255,.3)'},
+  };
+  const s=cfg[state]||cfg.saving;
+  el.textContent=s.t;el.style.background=s.bg;el.style.color=s.c;
+  el.style.border=`1px solid ${s.b}`;el.style.opacity='1';
+  if(state==='saved')_syncIndicatorTimeout=setTimeout(()=>{el.style.opacity='0';},2500);
+  if(state==='error')_syncIndicatorTimeout=setTimeout(()=>{el.style.opacity='0';},5000);
+}
+
+async function dbSave(){
+  if(!_dbReady||_isSaving)return;
+  _isSaving=true;
+  showSyncIndicator('saving');
+  try{
+    const now=new Date().toISOString();
+    const{error}=await _supabase.from('ig_state').upsert({
+      id:'main',
+      payload:{users,teams,months,records,criteria},
+      updated_at:now
+    },{onConflict:'id'});
+    if(error)throw error;
+    _lastRemoteAt=new Date(now).getTime();
+    showSyncIndicator('saved');
+  }catch(e){
+    console.warn('[DB save error]',e);
+    showSyncIndicator('error');
+    setTimeout(()=>dbSave(),5000);
+  }finally{
+    _isSaving=false;
+  }
+}
+
+async function dbLoad(){
+  try{
+    const{data,error}=await _supabase.from('ig_state').select('payload,updated_at').eq('id','main').single();
+    if(error||!data?.payload)return false;
+    const p=data.payload;
+    if(p&&(p.users?.length||p.teams?.length||p.months?.length)){
+      users=p.users||[];teams=p.teams||[];months=p.months||[];
+      records=p.records||{};criteria=p.criteria||{};
+      if(data.updated_at)_lastRemoteAt=new Date(data.updated_at).getTime();
+      ss(K.STATE,{users,teams,months,records,criteria});
+      return true;
+    }
+    return false;
+  }catch(e){console.warn('[DB load error]',e);return false;}
+}
+
+// Poll every 30s — detect changes from other computers and reload
+function startPolling(){
+  if(_pollInterval)clearInterval(_pollInterval);
+  _pollInterval=setInterval(async()=>{
+    if(!currentUser||!_dbReady||_isSaving)return;
+    try{
+      const{data}=await _supabase.from('ig_state').select('updated_at').eq('id','main').single();
+      if(!data?.updated_at)return;
+      const remoteAt=new Date(data.updated_at).getTime();
+      // If remote is newer than what we last saved/loaded, reload
+      if(remoteAt>_lastRemoteAt+2000){
+        showSyncIndicator('reload');
+        const loaded=await dbLoad();
+        if(loaded){refreshView();showSyncIndicator('saved');}
+      }
+    }catch(e){}
+  },30000);
+}
+
+function saveState(){
+  ss(K.STATE,{users,teams,months,records,criteria});
+  if(!_dbReady)return;
+  clearTimeout(_syncTimeout);
+  _syncTimeout=setTimeout(()=>dbSave(),600);
+}
+async function saveStateNow(){
+  ss(K.STATE,{users,teams,months,records,criteria});
+  if(!_dbReady)return;
+  clearTimeout(_syncTimeout);
+  await dbSave();
+}
+
+// ══════════════════════════════════════════════════════════
+// BOOT — sempre busca do Supabase primeiro
+// ══════════════════════════════════════════════════════════
+loadState();
+window.addEventListener('beforeunload',()=>{
+  if(_syncTimeout){clearTimeout(_syncTimeout);dbSave();}
+});
+_supabase.auth.onAuthStateChange((event,session)=>{if(event==='PASSWORD_RECOVERY')showScreen('criar-senha');});
+(async()=>{
+  const hash=window.location.hash;
+  if(hash&&hash.includes('access_token')){showScreen('criar-senha');return;}
+  const loginLoading=document.getElementById('login-loading');
+  const loginFormWrap=document.getElementById('login-form-wrap');
+  loginLoading.style.display='block';loginFormWrap.style.display='none';
+  try{
+    const loaded=await dbLoad();
+    if(!loaded){
+      // Supabase returned nothing useful — keep localStorage state but warn
+      console.warn('[boot] dbLoad returned no data, using localStorage');
+    }
+    _dbReady=true;
+    const{data:{session}}=await _supabase.auth.getSession();
+    if(session){
+      const email=session.user.email;
+      const u=users.find(x=>x.email&&x.email.toLowerCase()===email.toLowerCase());
+      if(u){login(u);return;}
+    }
+  }catch(e){
+    console.warn('[boot error]',e);
+    _dbReady=true; // allow saves even if boot failed
+  }
+  loginLoading.style.display='none';loginFormWrap.style.display='block';
+})();
+</script>
+</body>
+</html>
